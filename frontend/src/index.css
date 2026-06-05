@@ -1,0 +1,155 @@
+/* =====================================================================
+   NVISION — Tokens de design (ux.md §2 e §6.2)
+   As variáveis em :root são a ÚNICA fonte de verdade da paleta.
+   ===================================================================== */
+:root {
+  /* Funções semânticas de cor (ux.md §2.2) */
+  --green: #76b900; /* positivo, ativo, AI-native, ação principal */
+  --amber: #d4840a; /* atenção, AI-enabled, prioridade média */
+  --red: #e05a4b; /* alerta, urgência, risco */
+
+  /* Superfícies escuras (variações mínimas do mesmo tom) */
+  --bg-0: #080a07;
+  --bg-1: #0f1210;
+  --bg-2: #141710;
+
+  /* Texto */
+  --text: #e8ece5;
+  --text-dim: #5a6650; /* metadados, timestamps (camada 3) */
+
+  /* Bordas: opacidade máxima de 13% (ux.md §2.3) */
+  --border: rgba(255, 255, 255, 0.13);
+
+  --font-display: "Playfair Display", serif;
+  --font-body: "DM Sans", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-0);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Interatividade sem surpresa (ux.md §2.4) */
+a,
+button,
+.nav-item {
+  transition: all 0.15s;
+}
+
+/* --- Shell da aplicação (ux.md §3.1) --- */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 200px; /* fixo, nunca colapsa */
+  flex-shrink: 0;
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 12px;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 22px;
+  color: var(--text);
+  padding: 0 8px 16px;
+}
+.logo span {
+  color: var(--green);
+}
+
+.sec-lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--green);
+  padding: 16px 8px 8px;
+}
+
+.nav-item {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 6px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 14px;
+}
+.nav-item:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+}
+.nav-item.active {
+  color: var(--text);
+  background: rgba(118, 185, 0, 0.12);
+}
+
+.status-live {
+  margin-top: auto;
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.status-live .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+/* --- Área principal --- */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  height: 52px; /* fixo */
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+.topbar h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+}
+.topbar .subtitle {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.page {
+  flex: 1;
+  padding: 24px;
+  overflow: auto;
+}
+
+.placeholder {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 40px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
