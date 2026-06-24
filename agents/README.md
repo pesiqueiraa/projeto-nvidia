@@ -3,24 +3,13 @@
 Cada agente do NVISION vive aqui, um conceito por arquivo. A orquestração
 usa **LangGraph** (Entregável 2).
 
-## Arquivos atuais (fundação / Semana 1)
+## Arquivos atuais
 
 | Arquivo | O quê |
 |---|---|
 | `state.py` | `RadarState` — o estado tipado que trafega entre os nós. |
-| `graph.py` | Grafo mínimo de **2 nós** (`plan` → `echo`), ponto de partida didático. |
-
-## Por que começar com 2 nós?
-
-O CLAUDE.md pede explicitamente: entender `State`, `Node` e `Edge` antes de
-montar os 8 agentes. O grafo atual não chama LLM — ele só demonstra o fluxo
-`START → plan → echo → END` e como um nó atualiza o estado para o próximo ler.
-
-Rode isolado para ver o estado evoluir:
-
-```bash
-uv run python -m agents.graph
-```
+| `search_planner.py` | Primeiro agente real: LLM com saída estruturada (`SearchPlan`), escolhe termos de busca e fontes dentre o catálogo fixo. |
+| `graph.py` | Grafo de **2 nós** (`search_planner` → `echo`). `echo` ainda é placeholder até o Scraper Agent existir. |
 
 ## Próximos agentes (roadmap ux.md)
 
@@ -30,4 +19,10 @@ com uma transição **condicional** em `evidence_validator` (reprocessa se a
 confiança for baixa).
 
 ## O que aprendi
-> _(preencher conforme implementamos — exigência do CLAUDE.md)_
+
+- `with_structured_output` força o LLM a devolver algo compatível com um
+  schema Pydantic, eliminando parsing manual de texto livre.
+- Testar código que chama LLM sem gastar dinheiro/rede: o nó recebe o LLM
+  via uma referência de módulo (`get_llm`) que pode ser trocada por um
+  `FakeLLM` nos testes via `monkeypatch` — sem mudar a assinatura da função
+  nem arriscar conflito com a injeção automática de `config` do LangGraph.
