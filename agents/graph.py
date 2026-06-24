@@ -1,40 +1,25 @@
-"""Grafo LangGraph mínimo — exemplo didático de 2 nós.
+"""Grafo LangGraph do NVISION.
 
-CLAUDE.md (Entregável 2) pede explicitamente: "Comece com um grafo simples
-de 2 nós antes de implementar todos os agentes. Entenda o conceito de
-State, Node e Edge."
-
-Este arquivo é esse ponto de partida. Os dois nós abaixo NÃO chamam LLM
-ainda — eles só demonstram o fluxo State -> Node -> Edge. O Search Planner
-real (com LLM) entra na Semana 1 substituindo o stub `plan_node`.
+Primeira estação real do pipeline: `search_planner_node` (LLM, em
+agents/search_planner.py) substitui o antigo stub `plan_node`. `echo_node`
+continua como segunda estação só pra demonstrar o fluxo State -> Node ->
+Edge — será substituído pelo `scraper_node` quando o Scraper Agent for
+implementado (próxima rodada).
 
 Fluxo:
-    START -> plan -> echo -> END
+    START -> search_planner -> echo -> END
 """
 from langgraph.graph import END, START, StateGraph
 
+from agents.search_planner import search_planner_node
 from agents.state import RadarState
 
 
-def plan_node(state: RadarState) -> dict:
-    """Nó 1 (stub do Search Planner).
-
-    Recebe a `query` e devolve termos de busca + fontes. Por enquanto é uma
-    regra fixa; será trocado por uma chamada de LLM (`core.llm.get_llm`).
-    Um nó SEMPRE retorna um dict com as chaves do estado que quer atualizar.
-    """
-    query = state.get("query", "")
-    return {
-        "search_terms": [t.strip() for t in query.split() if t.strip()],
-        "sources": ["distrito.me", "neofeed.com.br"],
-        "messages": [("ai", f"[plan] query recebida: {query!r}")],
-    }
-
-
 def echo_node(state: RadarState) -> dict:
-    """Nó 2: apenas confirma o que o nó anterior produziu.
+    """Nó 2 (placeholder): apenas confirma o que o search_planner produziu.
 
-    Demonstra que o estado atualizado pelo `plan_node` já está visível aqui.
+    Demonstra que o estado atualizado pelo `search_planner_node` já está
+    visível aqui. Será substituído pelo `scraper_node` real.
     """
     termos = state.get("search_terms", [])
     return {"messages": [("ai", f"[echo] {len(termos)} termos prontos: {termos}")]}
@@ -50,11 +35,11 @@ def build_graph():
     """
     builder = StateGraph(RadarState)
 
-    builder.add_node("plan", plan_node)
+    builder.add_node("search_planner", search_planner_node)
     builder.add_node("echo", echo_node)
 
-    builder.add_edge(START, "plan")
-    builder.add_edge("plan", "echo")
+    builder.add_edge(START, "search_planner")
+    builder.add_edge("search_planner", "echo")
     builder.add_edge("echo", END)
 
     return builder.compile()
@@ -65,7 +50,7 @@ graph = build_graph()
 
 
 if __name__ == "__main__":
-    # Execução manual para aprender: `uv run python -m agents.graph`
+    # Execução manual — exige LLM_PROVIDER + chave configurados no .env.
     resultado = graph.invoke({"query": "startups de IA generativa no Brasil"})
     print("Estado final:")
     for chave, valor in resultado.items():
