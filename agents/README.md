@@ -9,7 +9,8 @@ usa **LangGraph** (Entregável 2).
 |---|---|
 | `state.py` | `RadarState` — o estado tipado que trafega entre os nós. |
 | `search_planner.py` | Primeiro agente real: LLM com saída estruturada (`SearchPlan`), escolhe termos de busca e fontes dentre o catálogo fixo. |
-| `graph.py` | Grafo de **2 nós** (`search_planner` → `echo`). `echo` ainda é placeholder até o Scraper Agent existir. |
+| `scraper.py` | Segundo agente: lê `sources` e descobre startups via adapters por fonte (em `scraping/`). Agnóstico de fonte e com erro tratado por fonte. |
+| `graph.py` | Grafo de **2 nós** (`search_planner` → `scraper`). Substituiu o antigo `echo` placeholder. |
 
 ## Próximos agentes (roadmap ux.md)
 
