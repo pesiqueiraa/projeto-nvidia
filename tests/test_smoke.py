@@ -19,14 +19,21 @@ def test_health_ok():
     assert resp.json()["status"] == "ok"
 
 
-def test_graph_runs_two_nodes(patch_get_llm, fixed_search_plan):
-    """O grafo de 2 nós executa: search_planner (LLM falso) -> echo."""
+def test_graph_runs_planner_then_scraper(patch_get_llm, fixed_search_plan):
+    """O grafo de 2 nós executa: search_planner (LLM falso) -> scraper.
+
+    Roda OFFLINE: as fontes do plano falso (distrito.me/startse.com) ainda não
+    têm adapter no v1, então o scraper só registra "sem adapter" e não toca a
+    rede — nenhum fetch_dynamic é chamado.
+    """
     final = graph.invoke({"query": "fintechs de IA"})
     # search_planner_node devolve o que o LLM falso produziu
     assert final["search_terms"] == fixed_search_plan.search_terms
     assert final["sources"] == fixed_search_plan.sources
-    # os dois nós deixaram rastro em messages (reducer add_messages)
-    assert len(final["messages"]) == 2
+    # scraper não encontrou adapter para essas fontes -> coleta vazia
+    assert final["raw_startups"] == []
+    # rastro em messages (reducer add_messages): 1 do planner + 1 por fonte
+    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources)
 
 
 def test_demo_plan_endpoint(patch_get_llm, fixed_search_plan):
