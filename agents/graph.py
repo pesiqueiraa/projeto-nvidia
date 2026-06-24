@@ -1,19 +1,21 @@
 """Grafo LangGraph do NVISION.
 
-Duas estações reais já implementadas:
+Três estações reais já implementadas:
   1. `search_planner_node` (LLM) — query -> termos de busca + fontes.
   2. `scraper_node`        — fontes -> startups cruas descobertas.
+  3. `enricher_node`       — para quem tem detail_url, coleta o conteúdo da
+                             página (trafilatura) -> matéria-prima do Extractor.
 
-O antigo `echo_node` (placeholder da Semana 0) foi substituído pelo Scraper.
 As próximas estações (extractor, classifier, ...) entram nas semanas
 seguintes, incluindo a aresta CONDICIONAL no evidence_validator (reprocessa
 via scraper quando a confiança for baixa) — ver README §Pipeline.
 
 Fluxo atual:
-    START -> search_planner -> scraper -> END
+    START -> search_planner -> scraper -> enricher -> END
 """
 from langgraph.graph import END, START, StateGraph
 
+from agents.enricher import enricher_node
 from agents.scraper import scraper_node
 from agents.search_planner import search_planner_node
 from agents.state import RadarState
@@ -31,10 +33,12 @@ def build_graph():
 
     builder.add_node("search_planner", search_planner_node)
     builder.add_node("scraper", scraper_node)
+    builder.add_node("enricher", enricher_node)
 
     builder.add_edge(START, "search_planner")
     builder.add_edge("search_planner", "scraper")
-    builder.add_edge("scraper", END)
+    builder.add_edge("scraper", "enricher")
+    builder.add_edge("enricher", END)
 
     return builder.compile()
 

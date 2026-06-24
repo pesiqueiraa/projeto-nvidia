@@ -31,6 +31,9 @@ class RawStartup(BaseModel):
     sector: str | None = None      # dica de setor, quando a fonte já fornece
                                    # (ex.: ranking da 100 Open). Opcional: nem
                                    # toda fonte tem; o Extractor confirma/normaliza.
+    content: str | None = None     # texto principal da página de detalhe,
+                                   # preenchido pelo Enricher (trafilatura).
+                                   # None = não enriquecida (sem detail_url ou falhou).
 
 
 class SourceAdapter:
