@@ -1,28 +1,22 @@
 """Grafo LangGraph do NVISION.
 
-Primeira estação real do pipeline: `search_planner_node` (LLM, em
-agents/search_planner.py) substitui o antigo stub `plan_node`. `echo_node`
-continua como segunda estação só pra demonstrar o fluxo State -> Node ->
-Edge — será substituído pelo `scraper_node` quando o Scraper Agent for
-implementado (próxima rodada).
+Duas estações reais já implementadas:
+  1. `search_planner_node` (LLM) — query -> termos de busca + fontes.
+  2. `scraper_node`        — fontes -> startups cruas descobertas.
 
-Fluxo:
-    START -> search_planner -> echo -> END
+O antigo `echo_node` (placeholder da Semana 0) foi substituído pelo Scraper.
+As próximas estações (extractor, classifier, ...) entram nas semanas
+seguintes, incluindo a aresta CONDICIONAL no evidence_validator (reprocessa
+via scraper quando a confiança for baixa) — ver README §Pipeline.
+
+Fluxo atual:
+    START -> search_planner -> scraper -> END
 """
 from langgraph.graph import END, START, StateGraph
 
+from agents.scraper import scraper_node
 from agents.search_planner import search_planner_node
 from agents.state import RadarState
-
-
-def echo_node(state: RadarState) -> dict:
-    """Nó 2 (placeholder): apenas confirma o que o search_planner produziu.
-
-    Demonstra que o estado atualizado pelo `search_planner_node` já está
-    visível aqui. Será substituído pelo `scraper_node` real.
-    """
-    termos = state.get("search_terms", [])
-    return {"messages": [("ai", f"[echo] {len(termos)} termos prontos: {termos}")]}
 
 
 def build_graph():
@@ -36,11 +30,11 @@ def build_graph():
     builder = StateGraph(RadarState)
 
     builder.add_node("search_planner", search_planner_node)
-    builder.add_node("echo", echo_node)
+    builder.add_node("scraper", scraper_node)
 
     builder.add_edge(START, "search_planner")
-    builder.add_edge("search_planner", "echo")
-    builder.add_edge("echo", END)
+    builder.add_edge("search_planner", "scraper")
+    builder.add_edge("scraper", END)
 
     return builder.compile()
 
@@ -50,7 +44,8 @@ graph = build_graph()
 
 
 if __name__ == "__main__":
-    # Execução manual — exige LLM_PROVIDER + chave configurados no .env.
+    # Execução manual — exige LLM_PROVIDER + chave no .env (search_planner usa
+    # LLM) e acesso à rede (scraper renderiza um site real).
     resultado = graph.invoke({"query": "startups de IA generativa no Brasil"})
     print("Estado final:")
     for chave, valor in resultado.items():

@@ -27,6 +27,11 @@ class RadarState(TypedDict, total=False):
     search_terms: list[str]
     sources: list[str]
 
+    # Saída do Scraper: startups cruas descobertas nas fontes (cada item é um
+    # RawStartup serializado com .model_dump()). Ainda NÃO estruturadas — o
+    # Extractor Agent enriquece depois (setor, funding, stack, sinais de IA).
+    raw_startups: list[dict]
+
     # `add_messages` é um reducer do LangGraph: em vez de sobrescrever,
     # ACUMULA mensagens. Útil para depurar o raciocínio dos agentes.
     messages: Annotated[list, add_messages]
