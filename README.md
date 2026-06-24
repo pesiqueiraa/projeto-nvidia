@@ -10,6 +10,45 @@ ecossistema NVIDIA.
 
 ---
 
+## 🔄 Pipeline multi-agente
+
+A consulta do gestor percorre **8 agentes** orquestrados por LangGraph,
+organizados em três blocos: **coleta**, **qualificação** e **recomendação**.
+
+```mermaid
+flowchart TD
+    Q([Consulta do gestor]) --> SP[Search Planner<br/>termos de busca + fontes]
+
+    subgraph coleta [Coleta de dados]
+        SP --> SC[Scraper<br/>sites, notícias, diretórios]
+        SC --> EX[Extractor<br/>dados estruturados]
+    end
+
+    subgraph qualificacao [Qualificação]
+        EX --> CL[Classifier<br/>AI-native / AI-enabled / Non-AI]
+        CL --> EV[Evidence Validator<br/>valida fontes + nível de confiança]
+    end
+
+    subgraph recomendacao [Recomendação]
+        RAG[NVIDIA RAG<br/>vetorial + BM25 + RRF + Cohere Rerank]
+        RAG --> RE[Recommendation<br/>cruza perfil + gaps + chunks]
+        RE --> BR[Briefing<br/>relatório executivo]
+    end
+
+    EV -->|confiança alta| RAG
+    EV -.->|confiança baixa: reprocessa| SC
+    BR --> OUT([Briefing executivo])
+
+    classDef done fill:#76b900,stroke:#5a8c00,color:#080a07;
+    class SP done;
+```
+
+
+
+**A aresta condicional importa.** O fluxo não é totalmente linear: o **Evidence Validator** decide o próximo passo conforme o nível de confiança calculado. Se a evidência for sólida, segue para o NVIDIA RAG; se for fraca ou insuficiente, o grafo **volta ao Scraper** para coletar mais dados antes de prosseguir. É esse roteamento condicional com estado compartilhado que justifica usar LangGraph em vez de simplesmente encadear funções — e é um dos principais objetivos de aprendizado do projeto.
+
+---
+
 ## 🗂️ Estrutura
 
 ```
