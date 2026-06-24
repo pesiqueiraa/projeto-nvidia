@@ -1,7 +1,8 @@
 """Testes de fumaça da fundação.
 
 Validam que as peças centrais carregam e conversam, sem depender de chaves
-de API nem de bancos no ar. Rode com: `uv run pytest`
+de API nem de bancos no ar (o LLM é falso via `patch_get_llm`).
+Rode com: `uv run pytest`
 """
 from fastapi.testclient import TestClient
 
@@ -18,19 +19,20 @@ def test_health_ok():
     assert resp.json()["status"] == "ok"
 
 
-def test_graph_runs_two_nodes():
-    """O grafo de 2 nós executa e popula o estado (State -> Node -> Edge)."""
-    final = graph.invoke({"query": "visão computacional agro"})
-    # plan_node quebra a query em termos
-    assert final["search_terms"] == ["visão", "computacional", "agro"]
+def test_graph_runs_two_nodes(patch_get_llm, fixed_search_plan):
+    """O grafo de 2 nós executa: search_planner (LLM falso) -> echo."""
+    final = graph.invoke({"query": "fintechs de IA"})
+    # search_planner_node devolve o que o LLM falso produziu
+    assert final["search_terms"] == fixed_search_plan.search_terms
+    assert final["sources"] == fixed_search_plan.sources
     # os dois nós deixaram rastro em messages (reducer add_messages)
     assert len(final["messages"]) == 2
 
 
-def test_demo_plan_endpoint():
-    """O endpoint de demo executa o grafo via HTTP."""
-    resp = client.post("/api/demo/plan", json={"query": "fintech IA"})
+def test_demo_plan_endpoint(patch_get_llm, fixed_search_plan):
+    """O endpoint de demo executa o grafo via HTTP, com LLM falso."""
+    resp = client.post("/api/demo/plan", json={"query": "fintechs de IA"})
     assert resp.status_code == 200
     body = resp.json()
-    assert body["search_terms"] == ["fintech", "IA"]
-    assert "distrito.me" in body["sources"]
+    assert body["search_terms"] == fixed_search_plan.search_terms
+    assert body["sources"] == fixed_search_plan.sources
