@@ -43,7 +43,6 @@ yarn-error.log*
 data/
 qdrant_storage/
 postgres_data/
-artefatos/
 CLAUDE.md
 
 # --- Sistema operacional / editor ---
