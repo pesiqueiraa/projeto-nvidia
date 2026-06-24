@@ -31,6 +31,12 @@ dependencies = [
     "loguru>=0.7",
     "httpx>=0.27",
     # --- Scraping (Entregável 1) ---
+    # Scrapling é o scraper principal: unifica fetch (HTTP/JS/anti-bot via
+    # Fetcher/DynamicFetcher/StealthyFetcher) + parsing num framework só.
+    # O extra [fetchers] traz os fetchers baseados em navegador (patchright).
+    "scrapling[fetchers]>=0.4.9",
+    # Stack canônica mantida para aprendizado da mecânica e fases futuras
+    # (extração de texto de notícias/enriquecimento — ver artefatos/ux.md §7.3).
     "playwright>=1.48",
     "beautifulsoup4>=4.12",
     "trafilatura>=1.12",
