@@ -72,11 +72,16 @@ uv run uvicorn api.main:app --reload
 #    Docs:    http://localhost:8000/docs
 ```
 
-Rodar o grafo LangGraph isolado (ponto de partida didático — 2 nós):
+Rodar o grafo LangGraph isolado (2 nós: `search_planner` real + `echo`
+placeholder). Exige `LLM_PROVIDER` e a chave correspondente preenchidos no
+`.env` — o primeiro nó já chama um LLM de verdade:
 
 ```bash
 uv run python -m agents.graph
 ```
+
+Sem chave configurada, prefira `uv run pytest` — os testes usam um LLM
+falso e não dependem de rede nem de chave de API.
 
 Testes de fumaça (não exigem chaves nem bancos no ar):
 
