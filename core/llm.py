@@ -1,9 +1,10 @@
 """Abstração da camada de LLM.
 
-O projeto ainda não fixou o provider (ux.md §7.7). Em vez de espalhar
-`ChatAnthropic(...)` pelos agentes, todos pedem o modelo aqui. Trocar de
-provider vira uma mudança de UMA variável de ambiente (`LLM_PROVIDER`),
-sem tocar em nenhum agente.
+Provider padrão: OpenAI (`gpt-4o-mini`), escolhido por custo. Em vez de
+espalhar `ChatOpenAI(...)` pelos agentes, todos pedem o modelo aqui. Trocar
+de provider vira uma mudança de UMA variável de ambiente (`LLM_PROVIDER`),
+sem tocar em nenhum agente — o suporte a Anthropic continua disponível caso
+seja necessário voltar.
 
 Decisão didática: mantemos a mecânica explícita (um if por provider) em
 vez de uma fábrica mágica, para que fique claro o que cada provider exige.

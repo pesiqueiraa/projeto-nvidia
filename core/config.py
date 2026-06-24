@@ -18,11 +18,11 @@ class Settings(BaseSettings):
         extra="ignore",  # ignora variáveis não declaradas aqui
     )
 
-    # --- LLM (provider decidido depois — ux.md §7.7) ---
-    llm_provider: Literal["anthropic", "openai"] = "anthropic"
+    # --- LLM (OpenAI por padrão, escolhido por custo) ---
+    llm_provider: Literal["anthropic", "openai"] = "openai"
     anthropic_model: str = "claude-sonnet-4-6"
     anthropic_api_key: str = ""
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-4o-mini"
     openai_api_key: str = ""
 
     # --- Embeddings / RAG ---
