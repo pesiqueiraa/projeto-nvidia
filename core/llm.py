@@ -22,7 +22,7 @@ def get_llm(temperature: float = 0.0) -> BaseChatModel:
 
     Cada agente chama `get_llm()` e recebe o modelo certo já configurado.
     Falha cedo e com mensagem clara se a chave não estiver presente —
-    "tratamento de erro explícito" é boa prática obrigatória (CLAUDE.md).
+    "tratamento de erro explícito" é boa prática
     """
     provider = settings.llm_provider
 

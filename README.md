@@ -4,7 +4,7 @@ Plataforma multi-agente de inteligência estratégica que mapeia, qualifica e
 nutre startups brasileiras com potencial **AI-native** para o programa
 **NVIDIA Inception**. Projeto da liga universitária de IA — o foco é
 **aprender na prática** LangGraph, RAG com reranking, scraping e o
-ecossistema NVIDIA (ver `CLAUDE.MD`).
+ecossistema NVIDIA.
 
 > Documentação de UX/arquitetura completa em [`artefatos/ux.md`](artefatos/ux.md).
 
@@ -26,7 +26,7 @@ docker-compose.yml   # Postgres + Qdrant locais
 ```
 
 Cada módulo tem o **seu próprio README** explicando o quê, o porquê e o que
-se aprendeu (exigência do CLAUDE.MD).
+se aprendeu.
 
 ---
 
