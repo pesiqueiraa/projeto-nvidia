@@ -32,6 +32,16 @@ class RadarState(TypedDict, total=False):
     # Extractor Agent enriquece depois (setor, funding, stack, sinais de IA).
     raw_startups: list[dict]
 
+    # Saída do Extractor: startups já ESTRUTURADAS (cada item é um
+    # StructuredStartup serializado com .model_dump()) — produto, setor,
+    # estágio, funding, stack e os sinais de IA que o Classifier vai usar.
+    extracted_startups: list[dict]
+
+    # Saída do Classifier: startups ROTULADAS como AI-native / AI-enabled /
+    # Non-AI (cada item é um ClassifiedStartup serializado, que aninha o
+    # StructuredStartup + label, justificativa e confiança da evidência).
+    classified_startups: list[dict]
+
     # `add_messages` é um reducer do LangGraph: em vez de sobrescrever,
     # ACUMULA mensagens. Útil para depurar o raciocínio dos agentes.
     messages: Annotated[list, add_messages]
