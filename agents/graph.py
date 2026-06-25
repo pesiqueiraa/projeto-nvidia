@@ -7,16 +7,19 @@ Três estações reais já implementadas:
                              página (trafilatura) -> matéria-prima do Extractor.
   4. `extractor_node` (LLM) — conteúdo bruto -> StructuredStartup (produto,
                              setor, estágio, funding, stack, sinais de IA).
+  5. `classifier_node` (LLM) — StructuredStartup -> rótulo AI-native /
+                             AI-enabled / Non-AI + justificativa e confiança.
 
-As próximas estações (classifier, evidence_validator, ...) entram nas semanas
+As próximas estações (evidence_validator, rag, ...) entram nas semanas
 seguintes, incluindo a aresta CONDICIONAL no evidence_validator (reprocessa
 via scraper quando a confiança for baixa) — ver README §Pipeline.
 
 Fluxo atual:
-    START -> search_planner -> scraper -> enricher -> extractor -> END
+    START -> search_planner -> scraper -> enricher -> extractor -> classifier -> END
 """
 from langgraph.graph import END, START, StateGraph
 
+from agents.classifier import classifier_node
 from agents.enricher import enricher_node
 from agents.extractor import extractor_node
 from agents.scraper import scraper_node
@@ -38,12 +41,14 @@ def build_graph():
     builder.add_node("scraper", scraper_node)
     builder.add_node("enricher", enricher_node)
     builder.add_node("extractor", extractor_node)
+    builder.add_node("classifier", classifier_node)
 
     builder.add_edge(START, "search_planner")
     builder.add_edge("search_planner", "scraper")
     builder.add_edge("scraper", "enricher")
     builder.add_edge("enricher", "extractor")
-    builder.add_edge("extractor", END)
+    builder.add_edge("extractor", "classifier")
+    builder.add_edge("classifier", END)
 
     return builder.compile()
 
