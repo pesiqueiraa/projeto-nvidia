@@ -19,17 +19,14 @@ def test_health_ok():
     assert resp.json()["status"] == "ok"
 
 
-def test_graph_runs_planner_scraper_enricher_extractor_classifier(
-    patch_get_llm, fixed_search_plan
-):
-    """O grafo de 5 nós executa: search_planner (LLM falso) -> scraper ->
-    enricher -> extractor -> classifier.
+def test_graph_runs_full_pipeline_to_evidence_validator(patch_get_llm, fixed_search_plan):
+    """O grafo de 6 nós executa: search_planner (LLM falso) -> scraper ->
+    enricher -> extractor -> classifier -> evidence_validator.
 
     Roda OFFLINE: as fontes do plano falso (distrito.me/startse.com) ainda não
     têm adapter no v1, então o scraper só registra "sem adapter" e não toca a
-    rede; o enricher recebe coleta vazia e não busca nada; o extractor estrutura
-    uma lista vazia e o classifier classifica uma lista vazia (nenhum dos dois
-    chega a tocar o LLM).
+    rede; cada etapa seguinte recebe lista vazia e não toca o LLM. Como não há
+    startups validadas, a aresta condicional roteia direto para END (sem loop).
     """
     final = graph.invoke({"query": "fintechs de IA"})
     # search_planner_node devolve o que o LLM falso produziu
@@ -37,13 +34,15 @@ def test_graph_runs_planner_scraper_enricher_extractor_classifier(
     assert final["sources"] == fixed_search_plan.sources
     # scraper não encontrou adapter para essas fontes -> coleta vazia
     assert final["raw_startups"] == []
-    # extractor recebe coleta vazia -> nada estruturado
+    # cada etapa subsequente recebe lista vazia e a propaga vazia
     assert final["extracted_startups"] == []
-    # classifier recebe lista vazia -> nada classificado
     assert final["classified_startups"] == []
+    assert final["validated_startups"] == []
+    # validator rodou uma vez; lista vazia -> roteou pra END (sem recoleta)
+    assert final["validation_attempts"] == 1
     # messages (reducer add_messages): 1 planner + 1 por fonte (scraper)
-    # + 1 enricher + 1 extractor + 1 classifier
-    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1
+    # + 1 enricher + 1 extractor + 1 classifier + 1 evidence_validator
+    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1 + 1
 
 
 def test_demo_plan_endpoint(patch_get_llm, fixed_search_plan):

@@ -42,6 +42,16 @@ class RadarState(TypedDict, total=False):
     # StructuredStartup + label, justificativa e confiança da evidência).
     classified_startups: list[dict]
 
+    # Saída do Evidence Validator: startups com a confiança VALIDADA por regras
+    # (cada item é um ValidatedStartup serializado, que aninha o
+    # ClassifiedStartup + validation_confidence + issues encontradas).
+    validated_startups: list[dict]
+
+    # Contador de passagens pelo Evidence Validator. É a GUARDA DE TERMINAÇÃO da
+    # aresta condicional: o roteamento só volta pro scraper enquanto este número
+    # for menor que MAX_ATTEMPTS, evitando loop infinito no grafo.
+    validation_attempts: int
+
     # `add_messages` é um reducer do LangGraph: em vez de sobrescrever,
     # ACUMULA mensagens. Útil para depurar o raciocínio dos agentes.
     messages: Annotated[list, add_messages]
