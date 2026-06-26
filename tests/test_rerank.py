@@ -8,8 +8,11 @@ proveniência e os dois scores), não a qualidade real do modelo.
 from types import SimpleNamespace
 
 import pytest
+from qdrant_client import QdrantClient
 
-from rag.rerank import rerank
+from rag.chunk import Chunk
+from rag.index import index_chunks
+from rag.rerank import _fallback_sem_rerank, rerank, retrieve_and_rerank
 from rag.retrieve import RetrievedChunk
 
 
@@ -83,3 +86,47 @@ def test_rerank_falha_sem_chave(monkeypatch):
     monkeypatch.setattr(settings, "cohere_api_key", "")
     with pytest.raises(RuntimeError, match="COHERE_API_KEY"):
         rerank("x", CHUNKS, client=None)
+
+
+# --- degradação graciosa (rate limit / falha do Cohere) -------------------
+
+def test_fallback_sem_rerank_ordena_por_score_vetorial():
+    candidatos = [
+        _chunk("A", "txt a", 0.30), _chunk("B", "txt b", 0.90), _chunk("C", "txt c", 0.50),
+    ]
+    out = _fallback_sem_rerank(candidatos, top_n=2)
+    assert [c.tech for c in out] == ["B", "C"]      # top 2 por score vetorial
+    # sem rerank: o rerank_score vira o próprio score vetorial (proxy)
+    assert out[0].rerank_score == 0.90
+    assert out[0].vector_score == 0.90
+
+
+class _FakeEmbeddings:
+    def embed_documents(self, textos):
+        return [[float(len(t)), 1.0] for t in textos]
+
+    def embed_query(self, texto):
+        return [float(len(texto)), 1.0]
+
+
+class _CohereQueCai:
+    def rerank(self, **kwargs):
+        raise RuntimeError("429 Too Many Requests")
+
+
+def test_retrieve_and_rerank_degrada_quando_cohere_falha():
+    client = QdrantClient(":memory:")
+    chunks = [
+        Chunk(tech="NIM", url="https://x/nim", text="inferência", chunk_index=0),
+        Chunk(tech="NeMo", url="https://x/nemo", text="framework de LLMs", chunk_index=0),
+    ]
+    index_chunks(chunks, client, _FakeEmbeddings(), collection_name="t")
+
+    # Cohere indisponível (429) -> NÃO propaga erro: cai no retrieval vetorial.
+    out = retrieve_and_rerank(
+        "qualquer", fetch_k=5, top_n=2,
+        qdrant_client=client, embeddings=_FakeEmbeddings(),
+        cohere_client=_CohereQueCai(), collection_name="t",
+    )
+    assert len(out) >= 1
+    assert all(c.rerank_score == c.vector_score for c in out)  # marca da degradação

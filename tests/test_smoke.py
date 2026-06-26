@@ -19,15 +19,17 @@ def test_health_ok():
     assert resp.json()["status"] == "ok"
 
 
-def test_graph_runs_full_pipeline_to_briefing(patch_get_llm, fixed_search_plan):
+def test_graph_runs_full_pipeline_to_briefing(
+    patch_get_llm, patch_scraper_offline, fixed_search_plan
+):
     """O grafo de 10 nós executa o pipeline completo: search_planner (LLM falso)
     -> scraper -> enricher -> extractor -> classifier -> evidence_validator ->
     rag -> recommendation -> fit_score -> briefing.
 
-    Roda OFFLINE: as fontes do plano falso (distrito.me/startse.com) ainda não
-    têm adapter no v1, então o scraper só registra "sem adapter" e não toca a
-    rede; cada etapa seguinte recebe lista vazia e não toca o LLM. Sem startups,
-    a cauda do pipeline não consulta serviço nenhum e encerra em END.
+    Roda OFFLINE: `patch_scraper_offline` faz toda fonte resolver "sem adapter",
+    então o scraper não toca a rede; cada etapa seguinte recebe lista vazia e
+    não toca o LLM. Sem startups, a cauda do pipeline não consulta serviço
+    nenhum e encerra em END.
     """
     final = graph.invoke({"query": "fintechs de IA"})
     # search_planner_node devolve o que o LLM falso produziu
@@ -52,7 +54,7 @@ def test_graph_runs_full_pipeline_to_briefing(patch_get_llm, fixed_search_plan):
     assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
 
 
-def test_demo_plan_endpoint(patch_get_llm, fixed_search_plan):
+def test_demo_plan_endpoint(patch_get_llm, patch_scraper_offline, fixed_search_plan):
     """O endpoint de demo executa o grafo via HTTP, com LLM falso."""
     resp = client.post("/api/demo/plan", json={"query": "fintechs de IA"})
     assert resp.status_code == 200
