@@ -5,6 +5,7 @@ import Placeholder from "./pages/Placeholder";
 import Pipeline from "./pages/Pipeline";
 import FitScore from "./pages/FitScore";
 import Qualificadas from "./pages/Qualificadas";
+import Analytics from "./pages/Analytics";
 
 // Shell da aplicação (ux.md §3.1): sidebar fixa + topbar + conteúdo.
 // As 5 rotas do ux.md §6.5. Por ora todas usam o Placeholder; cada uma
@@ -19,7 +20,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/pipeline" replace />} />
           <Route path="/pipeline" element={<Pipeline />} />
           <Route path="/qualificadas" element={<Qualificadas />} />
-          <Route path="/analytics" element={<Placeholder titulo="Analytics" />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/fit-score" element={<FitScore />} />
           <Route path="/sinais" element={<Placeholder titulo="Sinais de Evolução" />} />
         </Routes>

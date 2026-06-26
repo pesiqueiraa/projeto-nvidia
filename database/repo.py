@@ -128,3 +128,50 @@ def list_startups(limit: int = 200) -> list[dict]:
             (limit,),
         )
         return cur.fetchall()
+
+
+def analytics() -> dict:
+    """Agregados do ecossistema para a página Analytics — tudo via SQL (GROUP
+    BY/AVG/CASE), expondo a mecânica do banco em vez de agregar em Python."""
+    with get_conn() as conn, conn.cursor(row_factory=dict_row) as cur:
+        # KPIs base
+        cur.execute(
+            "SELECT count(*)::int AS total, round(avg(fit_score))::int AS avg_fit "
+            "FROM startups"
+        )
+        base = cur.fetchone()
+
+        # Distribuição por maturidade de IA
+        cur.execute(
+            "SELECT classification, count(*)::int AS count FROM startups "
+            "GROUP BY classification ORDER BY count DESC"
+        )
+        by_classification = cur.fetchall()
+
+        # Top setores
+        cur.execute(
+            "SELECT coalesce(sector, '—') AS sector, count(*)::int AS count "
+            "FROM startups GROUP BY sector ORDER BY count DESC LIMIT 8"
+        )
+        by_sector = cur.fetchall()
+
+        # Distribuição por faixa de Fit Score (os mesmos cortes do fit_score)
+        cur.execute(
+            """
+            SELECT CASE WHEN fit_score >= 70 THEN 'alto'
+                        WHEN fit_score >= 40 THEN 'médio'
+                        ELSE 'baixo' END AS tier,
+                   count(*)::int AS count
+            FROM startups WHERE fit_score IS NOT NULL
+            GROUP BY tier
+            """
+        )
+        by_tier = cur.fetchall()
+
+    return {
+        "total": base["total"],
+        "avg_fit": base["avg_fit"],
+        "by_classification": by_classification,
+        "by_sector": by_sector,
+        "by_tier": by_tier,
+    }

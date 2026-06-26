@@ -448,6 +448,88 @@ button,
   background: rgba(255, 255, 255, 0.02);
 }
 
+/* --- Página Analytics --- */
+.kpis {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.kpi {
+  flex: 1;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+.kpi-num {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--green);
+}
+.kpi-lbl {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.an-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.an-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.an-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.an-lbl {
+  width: 110px;
+  flex-shrink: 0;
+  color: var(--text);
+}
+.an-track {
+  flex: 1;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.an-fill {
+  height: 100%;
+  background: var(--text-dim);
+  border-radius: 4px;
+  min-width: 2px;
+}
+.an-fill.fill-green {
+  background: var(--green);
+}
+.an-fill.fill-amber {
+  background: var(--amber);
+}
+.an-fill.fill-red {
+  background: var(--red);
+}
+.an-fill.fill-dim {
+  background: var(--text-dim);
+}
+.an-val {
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+  color: var(--text-dim);
+}
+
 /* Trace do grafo */
 .trace {
   margin-top: 8px;

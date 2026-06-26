@@ -102,3 +102,10 @@ def list_startups(limit: int = 200) -> dict:
     qualificado e persistido — rápido e sem custo de LLM.
     """
     return {"startups": repo.list_startups(limit)}
+
+
+@app.get("/api/analytics", tags=["startups"])
+def analytics() -> dict:
+    """Visão agregada do ecossistema (página Analytics): totais, distribuição
+    por maturidade de IA, por faixa de fit e por setor."""
+    return repo.analytics()

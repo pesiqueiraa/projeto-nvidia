@@ -63,6 +63,21 @@ export async function listStartups(): Promise<StartupRow[]> {
   return (await resp.json()).startups;
 }
 
+// Agregados do ecossistema (página Analytics).
+export interface Analytics {
+  total: number;
+  avg_fit: number | null;
+  by_classification: { classification: string; count: number }[];
+  by_sector: { sector: string; count: number }[];
+  by_tier: { tier: string; count: number }[];
+}
+
+export async function getAnalytics(): Promise<Analytics> {
+  const resp = await fetch("/api/analytics");
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return resp.json();
+}
+
 export async function runPipeline(query: string): Promise<PipelineResult> {
   const resp = await fetch("/api/pipeline/run", {
     method: "POST",
