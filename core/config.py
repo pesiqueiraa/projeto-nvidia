@@ -31,6 +31,11 @@ class Settings(BaseSettings):
 
     # --- Scraping ---
     firecrawl_api_key: str = ""
+    # Teto de startups coletadas POR FONTE. Os diretórios listam centenas; sem
+    # um teto, cada uma viraria uma cadeia de fetches + chamadas de LLM/RAG,
+    # estourando custo e tempo de resposta (e o rate limit da chave Trial do
+    # Cohere, 10/min). Default conservador; ajuste via env conforme as cotas.
+    max_startups_per_source: int = 3
 
     # --- Bancos ---
     database_url: str = "postgresql://nvision:nvision@localhost:5432/nvision"

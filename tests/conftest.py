@@ -28,11 +28,21 @@ class FakeLLM:
 
 @pytest.fixture
 def fixed_search_plan() -> SearchPlan:
+    # Fontes REAIS (com adapter): refletem um plano plausível do planner, já que
+    # o catálogo agora é o registry de adapters (scraping/registry.py).
     return SearchPlan(
         search_terms=["fintech", "ia generativa", "open finance"],
-        sources=["distrito.me", "startse.com"],
+        sources=["wow.ac", "openstartups.net"],
         reasoning="consulta menciona fintechs de IA, priorizando portais gerais",
     )
+
+
+@pytest.fixture
+def patch_scraper_offline(monkeypatch):
+    """Neutraliza o scraper nos testes de grafo completo: nenhuma fonte resolve
+    adapter, então o Scraper não toca a rede e o pipeline propaga listas vazias.
+    (Sem isso, fontes reais no plano fariam o scraper raspar sites de verdade.)"""
+    monkeypatch.setattr("agents.scraper.get_adapter", lambda _dominio: None)
 
 
 @pytest.fixture

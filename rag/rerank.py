@@ -86,6 +86,26 @@ def rerank(
     return reordenados
 
 
+def _fallback_sem_rerank(
+    candidatos: list[RetrievedChunk], top_n: int
+) -> list[RerankedChunk]:
+    """Degradação graciosa quando o rerank está indisponível (ex.: rate limit
+    da chave Trial do Cohere, 429). O reranking é um REFINAMENTO; sem ele,
+    devolvemos os `top_n` melhores por similaridade vetorial — pior que o
+    cross-encoder, mas muito melhor que perder a startup. O `rerank_score` vira
+    o próprio score vetorial (proxy), para o restante do pipeline seguir igual.
+    """
+    ordenados = sorted(candidatos, key=lambda c: c.score, reverse=True)[:top_n]
+    return [
+        RerankedChunk(
+            **c.model_dump(exclude={"score"}),
+            vector_score=c.score,
+            rerank_score=c.score,
+        )
+        for c in ordenados
+    ]
+
+
 def retrieve_and_rerank(
     query: str,
     fetch_k: int = DEFAULT_FETCH_K,
@@ -95,12 +115,24 @@ def retrieve_and_rerank(
     cohere_client=None,
     collection_name: str | None = None,
 ) -> list[RerankedChunk]:
-    """Pipeline completo do RAG: recupera `fetch_k` por vetor e rerankeia p/ `top_n`."""
+    """Pipeline completo do RAG: recupera `fetch_k` por vetor e rerankeia p/ `top_n`.
+
+    Se o rerank falhar (rate limit/instabilidade do Cohere), DEGRADA para o
+    retrieval vetorial puro em vez de propagar o erro — o RAG não pode parar por
+    causa do reranker (tratamento de erro explícito — CLAUDE.md).
+    """
     kwargs = {"client": qdrant_client, "embeddings": embeddings}
     if collection_name is not None:
         kwargs["collection_name"] = collection_name
     candidatos = retrieve(query, top_k=fetch_k, **kwargs)
-    return rerank(query, candidatos, top_n=top_n, client=cohere_client)
+    try:
+        return rerank(query, candidatos, top_n=top_n, client=cohere_client)
+    except Exception as e:  # 429, rede, etc. — não pode derrubar o RAG
+        logger.warning(
+            "rerank indisponível ({}); degradando para retrieval vetorial puro",
+            type(e).__name__,
+        )
+        return _fallback_sem_rerank(candidatos, top_n)
 
 
 if __name__ == "__main__":
