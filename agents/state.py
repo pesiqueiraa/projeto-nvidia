@@ -52,6 +52,13 @@ class RadarState(TypedDict, total=False):
     # for menor que MAX_ATTEMPTS, evitando loop infinito no grafo.
     validation_attempts: int
 
+    # Saída do NVIDIA RAG Agent: para CADA startup, os trechos da base de
+    # conhecimento NVIDIA mais relevantes ao perfil dela — já recuperados por
+    # vetor e reranqueados pelo Cohere, com proveniência (tech + url) para
+    # citação. Cada item: {name, query, chunks:[RerankedChunk serializado]}.
+    # É o insumo do Recommendation Agent (próxima estação).
+    rag_contexts: list[dict]
+
     # `add_messages` é um reducer do LangGraph: em vez de sobrescrever,
     # ACUMULA mensagens. Útil para depurar o raciocínio dos agentes.
     messages: Annotated[list, add_messages]
