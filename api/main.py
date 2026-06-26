@@ -48,14 +48,41 @@ class PlanRequest(BaseModel):
 
 @app.post("/api/demo/plan", tags=["demo"])
 def demo_plan(req: PlanRequest) -> dict:
-    """Executa o grafo de 2 nós (Entregável 2 — ponto de partida).
+    """Executa o grafo e devolve só o PLANO de busca (search_planner).
 
-    Prova que FastAPI + LangGraph estão conversando. Será substituído pelo
-    `POST /api/pipeline/run` real quando os agentes existirem.
+    Endpoint leve para inspecionar o que o Search Planner produziu sem precisar
+    do payload completo. Para o resultado completo, use `/api/pipeline/run`.
     """
     final_state = graph.invoke({"query": req.query})
     return {
         "search_terms": final_state.get("search_terms", []),
         "sources": final_state.get("sources", []),
+        "trace": [str(m) for m in final_state.get("messages", [])],
+    }
+
+
+class PipelineRequest(BaseModel):
+    query: str
+
+
+@app.post("/api/pipeline/run", tags=["pipeline"])
+def pipeline_run(req: PipelineRequest) -> dict:
+    """Executa o pipeline multi-agente COMPLETO e devolve o resultado.
+
+    Roda os 9 nós (search_planner -> ... -> briefing) e expõe as saídas que
+    interessam à interface: as startups classificadas, as recomendações de
+    stack NVIDIA e os briefings executivos (markdown), além do trace do grafo.
+
+    Atenção: é uma chamada SÍNCRONA e pode demorar (scraping + LLM + RAG por
+    startup). O endpoint com streaming (ux.md §7.2) entra com a interface.
+    """
+    final_state = graph.invoke({"query": req.query})
+    return {
+        "query": req.query,
+        "search_terms": final_state.get("search_terms", []),
+        "sources": final_state.get("sources", []),
+        "classified_startups": final_state.get("classified_startups", []),
+        "recommendations": final_state.get("recommendations", []),
+        "briefings": final_state.get("briefings", []),
         "trace": [str(m) for m in final_state.get("messages", [])],
     }
