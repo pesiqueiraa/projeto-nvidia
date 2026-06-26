@@ -20,14 +20,14 @@ def test_health_ok():
 
 
 def test_graph_runs_full_pipeline_to_briefing(patch_get_llm, fixed_search_plan):
-    """O grafo de 9 nós executa o pipeline completo: search_planner (LLM falso)
+    """O grafo de 10 nós executa o pipeline completo: search_planner (LLM falso)
     -> scraper -> enricher -> extractor -> classifier -> evidence_validator ->
-    rag -> recommendation -> briefing.
+    rag -> recommendation -> fit_score -> briefing.
 
     Roda OFFLINE: as fontes do plano falso (distrito.me/startse.com) ainda não
     têm adapter no v1, então o scraper só registra "sem adapter" e não toca a
     rede; cada etapa seguinte recebe lista vazia e não toca o LLM. Sem startups,
-    rag/recommendation/briefing não consultam serviço nenhum e encerra em END.
+    a cauda do pipeline não consulta serviço nenhum e encerra em END.
     """
     final = graph.invoke({"query": "fintechs de IA"})
     # search_planner_node devolve o que o LLM falso produziu
@@ -39,15 +39,17 @@ def test_graph_runs_full_pipeline_to_briefing(patch_get_llm, fixed_search_plan):
     assert final["extracted_startups"] == []
     assert final["classified_startups"] == []
     assert final["validated_startups"] == []
-    # rag/recommendation/briefing rodaram sem startups -> vazios (e nada de rede)
+    # cauda do pipeline rodou sem startups -> vazios (e nada de rede)
     assert final["rag_contexts"] == []
     assert final["recommendations"] == []
+    assert final["fit_scores"] == []
     assert final["briefings"] == []
     # validator rodou uma vez; lista vazia -> seguiu pela cauda do pipeline e END
     assert final["validation_attempts"] == 1
     # messages (reducer add_messages): 1 planner + 1 por fonte (scraper) + enricher
-    # + extractor + classifier + evidence_validator + rag + recommendation + briefing
-    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1 + 1 + 1 + 1 + 1
+    # + extractor + classifier + evidence_validator + rag + recommendation
+    # + fit_score + briefing
+    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
 
 
 def test_demo_plan_endpoint(patch_get_llm, fixed_search_plan):

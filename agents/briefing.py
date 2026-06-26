@@ -40,14 +40,23 @@ def _fmt(valor) -> str:
     return str(valor)
 
 
-def _render_briefing(rec: dict, validated: dict | None) -> str:
+def _render_briefing(rec: dict, validated: dict | None,
+                     fit: dict | None = None) -> str:
     """Monta o markdown do briefing a partir dos dados estruturados.
 
     `rec` é um StartupRecommendation serializado; `validated` é o
-    ValidatedStartup correspondente (ou None, se não houver — caso raro).
+    ValidatedStartup correspondente (ou None); `fit` é o FitScore (ou None).
     """
     name = rec["name"]
     linhas: list[str] = [f"# Briefing executivo — {name}", ""]
+
+    # Fit Score com o Inception em destaque, logo no topo (o diferencial).
+    if fit is not None:
+        linhas += [
+            f"**Fit Score Inception: {fit['score']}/100** "
+            f"(prioridade {fit['tier']})",
+            "",
+        ]
 
     # --- Identidade + classificação (vêm do validated_startups) ---
     if validated is not None:
@@ -107,15 +116,18 @@ def briefing_node(state: RadarState) -> dict:
     """Nó 9 do grafo: gera o relatório executivo final por startup."""
     recomendacoes = state.get("recommendations", [])
     validadas = state.get("validated_startups", [])
-    # Junta o validated (identidade/classificação) à recomendação, por nome.
+    # Junta o validated (identidade/classificação) e o fit score à
+    # recomendação, ambos keyed por nome.
     val_por_nome = {
         v["classified"]["startup"]["name"]: v for v in validadas
     }
+    fit_por_nome = {f["name"]: f for f in state.get("fit_scores", [])}
 
     briefings: list[Briefing] = []
     for rec in recomendacoes:
         validated = val_por_nome.get(rec["name"])
-        markdown = _render_briefing(rec, validated)
+        fit = fit_por_nome.get(rec["name"])
+        markdown = _render_briefing(rec, validated, fit)
         briefings.append(Briefing(name=rec["name"], label=rec["label"], markdown=markdown))
 
     logger.info("briefing: {} relatórios gerados", len(briefings))

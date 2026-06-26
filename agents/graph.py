@@ -17,16 +17,17 @@ Três estações reais já implementadas:
                              mais relevantes ao perfil (insumo da recomendação).
   8. `recommendation_node` — converte o contexto RAG em recomendação de stack
                              NVIDIA por REGRAS (tech + confiança + citação).
-  9. `briefing_node`       — consolida tudo num relatório executivo (markdown)
-                             por startup, com citações e sinal de confiança.
+  9. `fit_score_node`      — DIFERENCIAL: calcula o Fit Score com o Inception
+                             (0–100) por startup e as rankeia por prioridade.
+ 10. `briefing_node`       — consolida tudo num relatório executivo (markdown)
+                             por startup, com citações, fit score e confiança.
 
-O pipeline de coleta→qualificação→recomendação→relatório está completo; o que
-vem a seguir é a interface web (Entregável 5) — ver README §Pipeline.
+Pipeline de coleta→qualificação→recomendação→score→relatório completo.
 
 Fluxo atual (com ciclo condicional no evidence_validator):
     START -> search_planner -> scraper -> enricher -> extractor -> classifier
           -> evidence_validator --(confiança baixa)--> scraper   (recoleta)
-            \--(ok)--> rag -> recommendation -> briefing -> END
+            \--(ok)--> rag -> recommendation -> fit_score -> briefing -> END
 """
 from langgraph.graph import END, START, StateGraph
 
@@ -35,6 +36,7 @@ from agents.classifier import classifier_node
 from agents.enricher import enricher_node
 from agents.evidence_validator import evidence_validator_node, route_after_validation
 from agents.extractor import extractor_node
+from agents.fit_score import fit_score_node
 from agents.rag import rag_node
 from agents.recommendation import recommendation_node
 from agents.scraper import scraper_node
@@ -62,6 +64,7 @@ def build_graph():
     builder.add_node("evidence_validator", evidence_validator_node)
     builder.add_node("rag", rag_node)
     builder.add_node("recommendation", recommendation_node)
+    builder.add_node("fit_score", fit_score_node)
     builder.add_node("briefing", briefing_node)
 
     builder.add_edge(START, "search_planner")
@@ -82,7 +85,8 @@ def build_graph():
         {"scraper": "scraper", END: "rag"},
     )
     builder.add_edge("rag", "recommendation")
-    builder.add_edge("recommendation", "briefing")
+    builder.add_edge("recommendation", "fit_score")
+    builder.add_edge("fit_score", "briefing")
     builder.add_edge("briefing", END)
 
     return builder.compile()

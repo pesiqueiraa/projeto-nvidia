@@ -1,56 +1,15 @@
 import { useState } from "react";
+import {
+  confClass,
+  labelClass,
+  PipelineResult,
+  runPipeline,
+  tierClass,
+} from "../api";
 
 // Página Pipeline (ux.md §6.5): o gestor digita uma consulta, dispara o
 // pipeline multi-agente no backend (POST /api/pipeline/run) e vê as startups
-// qualificadas com a stack NVIDIA recomendada e o sinal de confiança.
-
-// --- Tipos do payload do backend (espelham os modelos Pydantic) ---
-interface TechRec {
-  tech: string;
-  url: string;
-  relevance_score: number;
-  confidence: string;
-  snippet: string;
-}
-interface Recommendation {
-  name: string;
-  label: string;
-  technologies: TechRec[];
-  overall_confidence: string;
-  notes: string[];
-}
-interface StartupInner {
-  name: string;
-  description: string | null;
-  sector: string | null;
-  stage: string | null;
-  funding: string | null;
-}
-interface Classified {
-  startup: StartupInner;
-  label: string;
-  rationale: string;
-  confidence: string;
-}
-interface PipelineResult {
-  query: string;
-  classified_startups: Classified[];
-  recommendations: Recommendation[];
-  trace: string[];
-}
-
-// Cor semântica do rótulo de maturidade (ux.md §2.2).
-function labelClass(label: string): string {
-  if (label === "AI-native") return "badge-green";
-  if (label === "AI-enabled") return "badge-amber";
-  return "badge-dim";
-}
-// Cor semântica do nível de confiança.
-function confClass(conf: string): string {
-  if (conf === "high") return "badge-green";
-  if (conf === "medium") return "badge-amber";
-  return "badge-red";
-}
+// qualificadas com o Fit Score, a stack NVIDIA recomendada e a confiança.
 
 export default function Pipeline() {
   const [query, setQuery] = useState("startups de IA jurídica no Brasil");
@@ -63,13 +22,7 @@ export default function Pipeline() {
     setError(null);
     setResult(null);
     try {
-      const resp = await fetch("/api/pipeline/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      setResult(await resp.json());
+      setResult(await runPipeline(query));
     } catch (e) {
       setError(e instanceof Error ? e.message : "falha ao executar o pipeline");
     } finally {
@@ -77,8 +30,9 @@ export default function Pipeline() {
     }
   }
 
-  // Junta a recomendação ao retrato classificado, por nome.
+  // Junta o retrato classificado e o fit score à recomendação, por nome.
   const porNome = new Map(result?.classified_startups.map((c) => [c.startup.name, c]));
+  const fitPorNome = new Map(result?.fit_scores.map((f) => [f.name, f]));
 
   return (
     <div className="page">
@@ -112,11 +66,17 @@ export default function Pipeline() {
 
       {result?.recommendations.map((rec) => {
         const c = porNome.get(rec.name);
+        const fit = fitPorNome.get(rec.name);
         return (
           <div className="card" key={rec.name}>
             <div className="card-head">
               <h2>{rec.name}</h2>
               <span className={`badge ${labelClass(rec.label)}`}>{rec.label}</span>
+              {fit && (
+                <span className={`badge fit ${tierClass(fit.tier)}`}>
+                  Fit {fit.score}/100
+                </span>
+              )}
             </div>
 
             {c && (

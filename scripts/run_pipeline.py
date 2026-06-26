@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agents.briefing import briefing_node  # noqa: E402
+from agents.fit_score import fit_score_node  # noqa: E402
 from agents.rag import rag_node  # noqa: E402
 from agents.recommendation import recommendation_node  # noqa: E402
 
@@ -76,10 +77,17 @@ EXEMPLOS = [
 
 def main() -> None:
     state = {"validated_startups": EXEMPLOS}
-    # Executa os três últimos nós em sequência, encadeando o estado.
+    # Executa a cauda do pipeline em sequência, encadeando o estado.
     state.update(rag_node(state))
     state.update(recommendation_node(state))
+    state.update(fit_score_node(state))
     state.update(briefing_node(state))
+
+    # Ranking de prioridade (o diferencial) antes dos briefings detalhados.
+    print("RANKING DE FIT (Inception)\n")
+    for s in state["fit_scores"]:
+        print(f"  {s['score']:>3}/100  [{s['tier']:^5}]  {s['name']}  ({s['label']})")
+    print("\n" + "=" * 72 + "\n")
 
     for briefing in state["briefings"]:
         print(briefing["markdown"])

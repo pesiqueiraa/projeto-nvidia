@@ -83,6 +83,7 @@ def pipeline_run(req: PipelineRequest) -> dict:
         "sources": final_state.get("sources", []),
         "classified_startups": final_state.get("classified_startups", []),
         "recommendations": final_state.get("recommendations", []),
+        "fit_scores": final_state.get("fit_scores", []),
         "briefings": final_state.get("briefings", []),
         "trace": [str(m) for m in final_state.get("messages", [])],
     }
