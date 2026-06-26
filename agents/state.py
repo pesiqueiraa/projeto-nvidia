@@ -65,6 +65,12 @@ class RadarState(TypedDict, total=False):
     # StartupRecommendation serializado — insumo do Briefing Agent.
     recommendations: list[dict]
 
+    # Saída do Briefing Agent: o relatório executivo final por startup, em
+    # markdown, juntando identidade + classificação + validação + stack NVIDIA
+    # recomendada (com citações) + sinal de confiança. Cada item é um Briefing
+    # serializado {name, label, markdown} — o produto entregue à interface web.
+    briefings: list[dict]
+
     # `add_messages` é um reducer do LangGraph: em vez de sobrescrever,
     # ACUMULA mensagens. Útil para depurar o raciocínio dos agentes.
     messages: Annotated[list, add_messages]
