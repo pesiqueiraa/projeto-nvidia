@@ -15,6 +15,7 @@ Validator) simplesmente recoleta e sobrescreve `raw_startups`.
 from loguru import logger
 
 from agents.state import RadarState
+from core.config import settings
 from scraping.registry import get_adapter
 
 
@@ -31,7 +32,9 @@ def scraper_node(state: RadarState) -> dict:
             mensagens.append(("ai", f"[scraper] {dominio}: sem adapter (ignorado)"))
             continue
         try:
-            achadas = adapter.discover()
+            # Teto POR FONTE: os diretórios listam centenas; processar todas
+            # estouraria custo/tempo nas etapas seguintes (enricher/LLM/RAG).
+            achadas = adapter.discover()[: settings.max_startups_per_source]
             coletadas.extend(achadas)
             mensagens.append(("ai", f"[scraper] {dominio}: {len(achadas)} startups"))
         except Exception as e:  # uma fonte não pode derrubar as outras

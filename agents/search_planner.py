@@ -13,28 +13,19 @@ from pydantic import BaseModel
 
 from agents.state import RadarState
 from core.llm import get_llm
+from scraping.registry import ADAPTERS
 
-# Grupo A do catálogo de fontes (artefatos/backend.md §5): portais/agregadores
-# fixos, conhecidos de antemão. O Grupo B (sites/blogs oficiais de startups,
-# páginas de carreiras, perfis de founders) só existe depois que uma startup
-# específica já foi identificada — entra num agente futuro (evidence_validator
-# ou extractor).
-SOURCE_CATALOG = [
-    "startse.com",
-    "distrito.me",
-    "latitud.com",
-    "cubo.network",
-    "acestartups.com.br",
-    "endeavor.org.br",
-    "abstartups.com.br",
-    "bossainvest.com",
-    "anjosdobrasil.net",
-    "darwinstartups.com",
-    "liga.ventures",
-    "wow.ac",
-    "inovativabrasil.com.br",
-    "openstartups.net",
-]
+# O catálogo oferecido ao LLM é EXATAMENTE o conjunto de fontes que o sistema
+# sabe raspar (scraping/registry.py). Não adianta o planner escolher uma fonte
+# sem adapter — o scraper a ignoraria e a coleta viria vazia (era esse o bug:
+# o LLM escolhia portais "famosos" como startse/endeavor que não temos como
+# raspar). Amarrando ao registry, todo adapter novo entra aqui automaticamente
+# e o planner só propõe o que é coletável.
+#
+# Catálogo futuro (Grupo A do artefatos/backend.md §5 — distrito, cubo, ace,
+# endeavor, abstartups, liga.ventures, inovativabrasil, …) volta a este catálogo
+# conforme cada adapter correspondente for implementado em scraping/.
+SOURCE_CATALOG = sorted(ADAPTERS)
 
 SYSTEM_PROMPT = """Você é o Search Planner do NVISION, um radar que mapeia \
 startups brasileiras AI-native para o programa NVIDIA Inception.
