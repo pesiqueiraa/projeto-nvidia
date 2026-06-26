@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Placeholder from "./pages/Placeholder";
+import Pipeline from "./pages/Pipeline";
 
 // Shell da aplicação (ux.md §3.1): sidebar fixa + topbar + conteúdo.
 // As 5 rotas do ux.md §6.5. Por ora todas usam o Placeholder; cada uma
@@ -14,7 +15,7 @@ export default function App() {
         <Topbar />
         <Routes>
           <Route path="/" element={<Navigate to="/pipeline" replace />} />
-          <Route path="/pipeline" element={<Placeholder titulo="Pipeline" />} />
+          <Route path="/pipeline" element={<Pipeline />} />
           <Route path="/qualificadas" element={<Placeholder titulo="Qualificadas" />} />
           <Route path="/analytics" element={<Placeholder titulo="Analytics" />} />
           <Route path="/fit-score" element={<Placeholder titulo="Score de Fit" />} />
