@@ -32,8 +32,9 @@ def scraper_node(state: RadarState) -> dict:
             mensagens.append(("ai", f"[scraper] {dominio}: sem adapter (ignorado)"))
             continue
         try:
-            # Teto POR FONTE: os diretórios listam centenas; processar todas
-            # estouraria custo/tempo nas etapas seguintes (enricher/LLM/RAG).
+            # POOL de descoberta por fonte: contribui nomes para o filtro de
+            # relevância julgar (Relevance Agent). O teto do trabalho CARO
+            # (enriquecimento) é aplicado lá, não aqui — aqui é só descoberta.
             achadas = adapter.discover()[: settings.max_startups_per_source]
             coletadas.extend(achadas)
             mensagens.append(("ai", f"[scraper] {dominio}: {len(achadas)} startups"))

@@ -1,8 +1,10 @@
 r"""Grafo LangGraph do NVISION.
 
-Três estações reais já implementadas:
+Estações reais já implementadas:
   1. `search_planner_node` (LLM) — query -> termos de busca + fontes.
-  2. `scraper_node`        — fontes -> startups cruas descobertas.
+  2. `scraper_node`        — fontes -> startups cruas descobertas (pool amplo).
+  2b. `relevance_node` (LLM) — filtra o pool pela CONSULTA, mantendo só as
+                             startups relevantes ANTES do enriquecimento caro.
   3. `enricher_node`       — para quem tem detail_url, coleta o conteúdo da
                              página (trafilatura) -> matéria-prima do Extractor.
   4. `extractor_node` (LLM) — conteúdo bruto -> StructuredStartup (produto,
@@ -25,8 +27,8 @@ Três estações reais já implementadas:
 Pipeline de coleta→qualificação→recomendação→score→relatório completo.
 
 Fluxo atual (com ciclo condicional no evidence_validator):
-    START -> search_planner -> scraper -> enricher -> extractor -> classifier
-          -> evidence_validator --(confiança baixa)--> scraper   (recoleta)
+    START -> search_planner -> scraper -> relevance -> enricher -> extractor
+          -> classifier -> evidence_validator --(confiança baixa)--> scraper
             \--(ok)--> rag -> recommendation -> fit_score -> briefing -> END
 """
 from langgraph.graph import END, START, StateGraph
@@ -37,6 +39,7 @@ from agents.enricher import enricher_node
 from agents.evidence_validator import evidence_validator_node, route_after_validation
 from agents.extractor import extractor_node
 from agents.fit_score import fit_score_node
+from agents.relevance import relevance_node
 from agents.rag import rag_node
 from agents.recommendation import recommendation_node
 from agents.scraper import scraper_node
@@ -58,6 +61,7 @@ def build_graph():
 
     builder.add_node("search_planner", search_planner_node)
     builder.add_node("scraper", scraper_node)
+    builder.add_node("relevance", relevance_node)
     builder.add_node("enricher", enricher_node)
     builder.add_node("extractor", extractor_node)
     builder.add_node("classifier", classifier_node)
@@ -69,7 +73,8 @@ def build_graph():
 
     builder.add_edge(START, "search_planner")
     builder.add_edge("search_planner", "scraper")
-    builder.add_edge("scraper", "enricher")
+    builder.add_edge("scraper", "relevance")
+    builder.add_edge("relevance", "enricher")
     builder.add_edge("enricher", "extractor")
     builder.add_edge("extractor", "classifier")
     builder.add_edge("classifier", "evidence_validator")

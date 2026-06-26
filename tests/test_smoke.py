@@ -48,10 +48,10 @@ def test_graph_runs_full_pipeline_to_briefing(
     assert final["briefings"] == []
     # validator rodou uma vez; lista vazia -> seguiu pela cauda do pipeline e END
     assert final["validation_attempts"] == 1
-    # messages (reducer add_messages): 1 planner + 1 por fonte (scraper) + enricher
-    # + extractor + classifier + evidence_validator + rag + recommendation
-    # + fit_score + briefing
-    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
+    # messages (reducer add_messages): 1 planner + 1 por fonte (scraper)
+    # + relevance + enricher + extractor + classifier + evidence_validator
+    # + rag + recommendation + fit_score + briefing
+    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
 
 
 def test_demo_plan_endpoint(patch_get_llm, patch_scraper_offline, fixed_search_plan):
