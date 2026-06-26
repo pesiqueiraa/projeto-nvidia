@@ -15,14 +15,16 @@ Três estações reais já implementadas:
   7. `rag_node`            — consulta a base NVIDIA (Qdrant + Cohere Rerank) e
                              recupera, por startup, os trechos de tecnologia
                              mais relevantes ao perfil (insumo da recomendação).
+  8. `recommendation_node` — converte o contexto RAG em recomendação de stack
+                             NVIDIA por REGRAS (tech + confiança + citação).
 
-As próximas estações (recommendation, briefing, ...) entram nas semanas
-seguintes — ver README §Pipeline.
+As próximas estações (briefing, ...) entram nas semanas seguintes — ver
+README §Pipeline.
 
 Fluxo atual (com ciclo condicional no evidence_validator):
     START -> search_planner -> scraper -> enricher -> extractor -> classifier
           -> evidence_validator --(confiança baixa)--> scraper   (recoleta)
-                               \--(ok / sem orçamento)--> rag -> END
+                               \--(ok / sem orçamento)--> rag -> recommendation -> END
 """
 from langgraph.graph import END, START, StateGraph
 
@@ -31,6 +33,7 @@ from agents.enricher import enricher_node
 from agents.evidence_validator import evidence_validator_node, route_after_validation
 from agents.extractor import extractor_node
 from agents.rag import rag_node
+from agents.recommendation import recommendation_node
 from agents.scraper import scraper_node
 from agents.search_planner import search_planner_node
 from agents.state import RadarState
@@ -55,6 +58,7 @@ def build_graph():
     builder.add_node("classifier", classifier_node)
     builder.add_node("evidence_validator", evidence_validator_node)
     builder.add_node("rag", rag_node)
+    builder.add_node("recommendation", recommendation_node)
 
     builder.add_edge(START, "search_planner")
     builder.add_edge("search_planner", "scraper")
@@ -73,7 +77,8 @@ def build_graph():
         route_after_validation,
         {"scraper": "scraper", END: "rag"},
     )
-    builder.add_edge("rag", END)
+    builder.add_edge("rag", "recommendation")
+    builder.add_edge("recommendation", END)
 
     return builder.compile()
 

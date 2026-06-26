@@ -59,6 +59,12 @@ class RadarState(TypedDict, total=False):
     # É o insumo do Recommendation Agent (próxima estação).
     rag_contexts: list[dict]
 
+    # Saída do Recommendation Agent: para CADA startup, as tecnologias NVIDIA
+    # recomendadas (derivadas do contexto RAG por REGRAS explícitas), cada uma
+    # com relevância, nível de confiança e citação. Cada item é um
+    # StartupRecommendation serializado — insumo do Briefing Agent.
+    recommendations: list[dict]
+
     # `add_messages` é um reducer do LangGraph: em vez de sobrescrever,
     # ACUMULA mensagens. Útil para depurar o raciocínio dos agentes.
     messages: Annotated[list, add_messages]

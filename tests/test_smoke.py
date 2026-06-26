@@ -19,15 +19,15 @@ def test_health_ok():
     assert resp.json()["status"] == "ok"
 
 
-def test_graph_runs_full_pipeline_to_rag(patch_get_llm, fixed_search_plan):
-    """O grafo de 7 nós executa: search_planner (LLM falso) -> scraper ->
-    enricher -> extractor -> classifier -> evidence_validator -> rag.
+def test_graph_runs_full_pipeline_to_recommendation(patch_get_llm, fixed_search_plan):
+    """O grafo de 8 nós executa: search_planner (LLM falso) -> scraper ->
+    enricher -> extractor -> classifier -> evidence_validator -> rag ->
+    recommendation.
 
     Roda OFFLINE: as fontes do plano falso (distrito.me/startse.com) ainda não
     têm adapter no v1, então o scraper só registra "sem adapter" e não toca a
-    rede; cada etapa seguinte recebe lista vazia e não toca o LLM. Como não há
-    startups validadas, a aresta condicional segue para o `rag`, que — sem
-    startups — não consulta Qdrant/Cohere e encerra em END (sem loop, offline).
+    rede; cada etapa seguinte recebe lista vazia e não toca o LLM. Sem startups,
+    rag/recommendation não consultam serviço nenhum e o grafo encerra em END.
     """
     final = graph.invoke({"query": "fintechs de IA"})
     # search_planner_node devolve o que o LLM falso produziu
@@ -39,13 +39,14 @@ def test_graph_runs_full_pipeline_to_rag(patch_get_llm, fixed_search_plan):
     assert final["extracted_startups"] == []
     assert final["classified_startups"] == []
     assert final["validated_startups"] == []
-    # rag rodou sem startups -> nenhum contexto recuperado (e nada de rede)
+    # rag e recommendation rodaram sem startups -> vazios (e nada de rede)
     assert final["rag_contexts"] == []
-    # validator rodou uma vez; lista vazia -> seguiu pro rag e então END
+    assert final["recommendations"] == []
+    # validator rodou uma vez; lista vazia -> seguiu pro rag/recommendation e END
     assert final["validation_attempts"] == 1
     # messages (reducer add_messages): 1 planner + 1 por fonte (scraper)
-    # + 1 enricher + 1 extractor + 1 classifier + 1 evidence_validator + 1 rag
-    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1 + 1 + 1
+    # + enricher + extractor + classifier + evidence_validator + rag + recommendation
+    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1 + 1 + 1 + 1
 
 
 def test_demo_plan_endpoint(patch_get_llm, fixed_search_plan):
