@@ -10,7 +10,7 @@
 -- Startups identificadas e classificadas pelo radar
 CREATE TABLE IF NOT EXISTS startups (
     id             SERIAL PRIMARY KEY,
-    name           TEXT NOT NULL,
+    name           TEXT NOT NULL UNIQUE,  -- chave natural: permite UPSERT por nome
     sector         TEXT,
     stage          TEXT,                 -- ex.: seed, série A...
     funding        TEXT,                 -- texto livre (ex.: "R$ 12M")

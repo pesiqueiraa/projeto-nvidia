@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from agents.graph import graph
 from core.config import settings
+from database import repo
 
 app = FastAPI(
     title="NVISION — NVIDIA Startup AI Radar",
@@ -77,6 +78,9 @@ def pipeline_run(req: PipelineRequest) -> dict:
     startup). O endpoint com streaming (ux.md §7.2) entra com a interface.
     """
     final_state = graph.invoke({"query": req.query})
+    # Persiste o resultado para as páginas Qualificadas/Analytics (resiliente:
+    # uma falha de banco não derruba a resposta do pipeline).
+    salvas = repo.persist_pipeline_result(final_state)
     return {
         "query": req.query,
         "search_terms": final_state.get("search_terms", []),
@@ -85,5 +89,16 @@ def pipeline_run(req: PipelineRequest) -> dict:
         "recommendations": final_state.get("recommendations", []),
         "fit_scores": final_state.get("fit_scores", []),
         "briefings": final_state.get("briefings", []),
+        "persisted": salvas,
         "trace": [str(m) for m in final_state.get("messages", [])],
     }
+
+
+@app.get("/api/startups", tags=["startups"])
+def list_startups(limit: int = 200) -> dict:
+    """Lista as startups acumuladas no banco (página Qualificadas).
+
+    Diferente do pipeline (que roda os agentes), aqui só LÊ o que já foi
+    qualificado e persistido — rápido e sem custo de LLM.
+    """
+    return {"startups": repo.list_startups(limit)}

@@ -45,6 +45,24 @@ export interface PipelineResult {
   trace: string[];
 }
 
+// Startup persistida no banco (página Qualificadas).
+export interface StartupRow {
+  name: string;
+  sector: string | null;
+  stage: string | null;
+  funding: string | null;
+  classification: string;
+  confidence: number;
+  fit_score: number | null;
+  created_at: string;
+}
+
+export async function listStartups(): Promise<StartupRow[]> {
+  const resp = await fetch("/api/startups");
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return (await resp.json()).startups;
+}
+
 export async function runPipeline(query: string): Promise<PipelineResult> {
   const resp = await fetch("/api/pipeline/run", {
     method: "POST",
