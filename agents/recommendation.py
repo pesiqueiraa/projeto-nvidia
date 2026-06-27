@@ -1,137 +1,183 @@
-"""Recommendation Agent — oitava estação do grafo.
+"""Recommendation Agent — oitava estação do grafo (catálogo de regras + LLM).
 
-O RAG Agent recuperou, por startup, os trechos da base NVIDIA mais relevantes
-ao perfil (já reranqueados). Este nó os transforma em uma RECOMENDAÇÃO de stack:
-quais tecnologias NVIDIA fazem sentido, com qual confiança e com citação.
+Mudança de paradigma (Entregável 4, escolha do gestor):
+  ANTES: "fit" era só a similaridade semântica do perfil com os docs NVIDIA (o
+  rerank do Cohere) — media parecença de texto, não benefício, e saía baixo para
+  todo mundo. AGORA: um CATÁLOGO estruturado de produtos NVIDIA (recommender/
+  catalog.py) pontua, por REGRA, o fit de cada produto com cada empresa a partir
+  de sinais de necessidade + setor + maturidade. O rerank do RAG entra como UM
+  insumo de apoio, não como juiz.
 
-Por que baseado em REGRAS (sem LLM) — CLAUDE.md (Entregável 4):
-  "estruture a lógica como regras explícitas (if/else) antes de usar o LLM, e
-  compare as duas abordagens". Recomendar a partir do score de rerank é o caso
-  perfeito: transparente, determinístico, barato e testável offline. Uma versão
-  via LLM (que escreve a justificativa de fit em linguagem natural) fica como o
-  próximo passo, para comparação.
+Híbrido regras + LLM:
+  - As REGRAS decidem QUAIS produtos e com QUE fit (0–100) — transparente,
+    determinístico, auditável (a lição do Entregável 4: regras primeiro).
+  - O LLM escreve só o "COMO este produto ajuda ESTA empresa a crescer" sobre os
+    produtos que a regra elegeu. É narrativa por cima de fatos, não decisão.
+  - RESILIENTE: se o LLM falhar, cai na tese template do próprio catálogo (cada
+    produto traz uma) — o pipeline nunca quebra por causa da narrativa.
 
-As regras, explícitas:
-  1. Agrupa os trechos por tecnologia (uma tech pode vir em vários chunks);
-     fica o MELHOR rerank_score de cada uma + a citação daquele trecho.
-  2. Confiança da tech vem de FAIXAS do rerank_score (a lição do Entregável 3:
-     o score absoluto do Cohere é um sinal de confiança calibrado).
-  3. Non-AI: a fit com a stack NVIDIA de IA é especulativa — a confiança geral
-     é REBAIXADA e uma ressalva é anexada (sinalizar incerteza — CLAUDE.md).
-  4. Perfil sem contexto recuperado => recomendação vazia, com o motivo.
+"Abrir o fit": a maturidade não zera mais Non-AI; cada produto declara para
+quais maturidades serve (catalog), então empresas data-heavy recebem RAPIDS/infra
+mesmo sem serem AI-native.
 """
-from typing import Literal
-
+from langchain_core.messages import HumanMessage, SystemMessage
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from agents.state import RadarState
+from core.llm import get_llm
+from recommender.catalog import Confidence, ProductFit, score_products
 
-Confidence = Literal["high", "medium", "low"]
-
-# Quantas tecnologias recomendar por startup (as de maior relevância).
-TOP_K_TECHS = 3
-# Faixas de confiança a partir do rerank_score do Cohere (0..1).
-SCORE_HIGH = 0.50
-SCORE_MEDIUM = 0.15
+SYSTEM_PROMPT = """Você é o Recommendation Agent do NVISION. Recebe o perfil de \
+uma startup brasileira e uma lista de produtos NVIDIA JÁ SELECIONADOS por regra \
+como compatíveis com ela. Sua tarefa é, para CADA produto, escrever UMA frase \
+objetiva de COMO aquele produto ajudaria ESTA startup específica a crescer — \
+citando o que no perfil dela justifica o uso. Não invente fatos fora do perfil, \
+não reordene nem descarte produtos. Devolva um item por produto recebido."""
 
 
 class TechRecommendation(BaseModel):
-    """Uma tecnologia NVIDIA recomendada, com confiança e citação."""
+    """Uma tecnologia NVIDIA recomendada, com fit, citação e tese de crescimento."""
 
     tech: str
-    url: str                 # proveniência -> citação no briefing
-    relevance_score: float   # melhor rerank_score do Cohere para esta tech
-    confidence: Confidence
-    snippet: str             # trecho curto que embasou a recomendação
+    url: str
+    summary: str                 # o que o produto faz
+    fit: int                     # 0..100 — fit produto×empresa (regra)
+    confidence: Confidence       # faixa de confiança do fit
+    matched_signals: list[str]   # gatilhos do perfil que casaram (transparência)
+    relevance_score: float       # melhor rerank do RAG (apoio/citação)
+    growth: str                  # COMO ajuda a empresa a crescer (LLM ou template)
+    snippet: str = ""            # trecho do RAG para citação (se houver)
 
 
 class StartupRecommendation(BaseModel):
     """Recomendação de stack NVIDIA para UMA startup."""
 
     name: str
-    label: str               # AI-native / AI-enabled / Non-AI (orienta a leitura)
+    label: str
     technologies: list[TechRecommendation] = Field(default_factory=list)
     overall_confidence: Confidence = "low"
     notes: list[str] = Field(default_factory=list)
 
 
-def _tier(score: float) -> Confidence:
-    """Mapeia o rerank_score para um nível de confiança (regra explícita)."""
-    if score >= SCORE_HIGH:
-        return "high"
-    if score >= SCORE_MEDIUM:
-        return "medium"
-    return "low"
+class _GrowthItem(BaseModel):
+    tech: str
+    growth: str
 
 
-def _melhor_por_tech(chunks: list[dict]) -> dict[str, dict]:
-    """Agrupa chunks por tech, guardando o de MAIOR rerank_score de cada uma."""
-    melhor: dict[str, dict] = {}
+class _GrowthOutput(BaseModel):
+    """Saída estruturada do LLM: a tese de crescimento por produto."""
+
+    items: list[_GrowthItem]
+
+
+def _perfil_texto(startup: dict) -> str:
+    """Texto livre do perfil para o casamento de sinais do catálogo."""
+    partes: list[str] = []
+    for campo in ("name", "description", "sector"):
+        if startup.get(campo):
+            partes.append(str(startup[campo]))
+    if startup.get("ai_signals"):
+        partes.append("; ".join(startup["ai_signals"]))
+    if startup.get("tech_stack"):
+        partes.append(", ".join(startup["tech_stack"]))
+    return ". ".join(partes)
+
+
+def _semantica_por_tech(chunks: list[dict]) -> tuple[dict[str, float], dict[str, str]]:
+    """Do RAG: melhor rerank por tech (sinal de apoio) + trecho p/ citação."""
+    melhor_score: dict[str, float] = {}
+    snippet: dict[str, str] = {}
     for c in chunks:
         tech = c["tech"]
-        if tech not in melhor or c["rerank_score"] > melhor[tech]["rerank_score"]:
-            melhor[tech] = c
-    return melhor
+        score = c.get("rerank_score", 0.0)
+        if tech not in melhor_score or score > melhor_score[tech]:
+            melhor_score[tech] = score
+            snippet[tech] = c.get("text", "")[:200].strip()
+    return melhor_score, snippet
 
 
-def _recomendar(name: str, label: str, chunks: list[dict]) -> StartupRecommendation:
-    """Aplica as regras de recomendação a UMA startup."""
-    if not chunks:
+def _escrever_crescimento(startup: dict, fits: list[ProductFit]) -> dict[str, str]:
+    """LLM: uma frase de 'como ajuda a crescer' por produto. Resiliente."""
+    try:
+        llm = get_llm().with_structured_output(_GrowthOutput)
+        catalogo = "\n".join(
+            f"- {f.tech}: {f.summary} (sinais que casaram: "
+            f"{', '.join(f.matched_signals) or 'setor/semântica'})"
+            for f in fits
+        )
+        humano = (
+            f"Perfil da startup:\n{_perfil_texto(startup)}\n\n"
+            f"Produtos NVIDIA selecionados:\n{catalogo}"
+        )
+        out: _GrowthOutput = llm.invoke(
+            [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=humano)]
+        )
+        return {i.tech.strip(): i.growth.strip() for i in out.items if i.growth.strip()}
+    except Exception:  # narrativa nunca derruba o pipeline — cai no template
+        logger.exception("recommendation: LLM de crescimento falhou; usando template")
+        return {}
+
+
+def _recomendar(name: str, label: str, startup: dict,
+                chunks: list[dict], usar_llm: bool = True) -> StartupRecommendation:
+    """Aplica catálogo (regras) + LLM (narrativa) a UMA startup."""
+    sem_por_tech, snip_por_tech = _semantica_por_tech(chunks)
+    fits = score_products(
+        _perfil_texto(startup), startup.get("sector"), label, sem_por_tech
+    )
+
+    if not fits:
         return StartupRecommendation(
             name=name, label=label,
-            notes=["sem contexto NVIDIA recuperado para esta startup"],
+            notes=["nenhum produto NVIDIA com fit suficiente para este perfil"],
         )
 
-    # Regra 1+2: melhor score por tech -> TechRecommendation com confiança.
-    melhores = _melhor_por_tech(chunks)
+    # LLM escreve o 'como ajuda a crescer' (com fallback na tese do catálogo).
+    growth_por_tech = _escrever_crescimento(startup, fits) if usar_llm else {}
+
     techs = [
         TechRecommendation(
-            tech=c["tech"],
-            url=c["url"],
-            relevance_score=c["rerank_score"],
-            confidence=_tier(c["rerank_score"]),
-            snippet=c["text"][:200].strip(),
+            tech=f.tech,
+            url=f.url,
+            summary=f.summary,
+            fit=f.fit,
+            confidence=f.confidence,
+            matched_signals=f.matched_signals,
+            relevance_score=f.semantic_score,
+            growth=growth_por_tech.get(f.tech, f.growth_thesis),
+            snippet=snip_por_tech.get(f.tech, ""),
         )
-        for c in melhores.values()
+        for f in fits
     ]
-    techs.sort(key=lambda t: t.relevance_score, reverse=True)
-    techs = techs[:TOP_K_TECHS]
 
-    # Confiança geral = a da melhor tech (lista já ordenada).
-    overall: Confidence = techs[0].confidence
     notes: list[str] = []
-
-    # Regra 3: Non-AI -> fit especulativa, rebaixa e sinaliza.
     if label == "Non-AI":
-        overall = "low"
         notes.append(
-            "startup classificada como Non-AI: recomendação de stack NVIDIA de "
-            "IA é especulativa (baixa confiança)"
+            "startup Non-AI: priorize os produtos de dado/infra (maior fit); "
+            "os de IA generativa são uma aposta de evolução"
         )
 
     return StartupRecommendation(
         name=name, label=label, technologies=techs,
-        overall_confidence=overall, notes=notes,
+        overall_confidence=techs[0].confidence, notes=notes,
     )
 
 
 def recommendation_node(state: RadarState) -> dict:
-    """Nó 8 do grafo: recomenda a stack NVIDIA por startup (por regras)."""
-    rag_contexts = state.get("rag_contexts", [])
+    """Nó 8 do grafo: recomenda a stack NVIDIA por startup (catálogo + LLM)."""
     validadas = state.get("validated_startups", [])
-    # Junta o rótulo (que mora no validated) ao contexto RAG (keyed por nome).
-    label_por_nome = {
-        v["classified"]["startup"]["name"]: v["classified"]["label"]
-        for v in validadas
+    chunks_por_nome = {
+        c["name"]: c.get("chunks", []) for c in state.get("rag_contexts", [])
     }
 
     recomendacoes: list[StartupRecommendation] = []
     com_recomendacao = 0
-    for ctx in rag_contexts:
-        name = ctx["name"]
-        label = label_por_nome.get(name, "Non-AI")
-        rec = _recomendar(name, label, ctx.get("chunks", []))
+    for v in validadas:
+        startup = v["classified"]["startup"]
+        name = startup.get("name", "")
+        label = v["classified"]["label"]
+        rec = _recomendar(name, label, startup, chunks_por_nome.get(name, []))
         recomendacoes.append(rec)
         if rec.technologies:
             com_recomendacao += 1
@@ -142,8 +188,8 @@ def recommendation_node(state: RadarState) -> dict:
         "messages": [
             (
                 "ai",
-                f"[recommendation] {com_recomendacao}/{len(rag_contexts)} startups "
-                f"com stack NVIDIA recomendada (top {TOP_K_TECHS} por startup)",
+                f"[recommendation] {com_recomendacao}/{len(validadas)} startups "
+                f"com stack NVIDIA recomendada (catálogo de regras + LLM)",
             )
         ],
     }

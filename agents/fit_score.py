@@ -28,14 +28,15 @@ from agents.state import RadarState
 Tier = Literal["alto", "médio", "baixo"]
 
 # --- Mapas e pesos das regras (a "constituição" do score, explícita) ---
-MATURITY_MAP = {"AI-native": 1.0, "AI-enabled": 0.6, "Non-AI": 0.1}
+# "Abrir o fit": o Non-AI não é mais quase zerado (0.1 -> 0.30). O fit por
+# produto (catalog) já modula a maturidade por produto, então aqui a maturidade
+# pesa MENOS e o fit NVIDIA pesa MAIS — evita penalizar duas vezes e deixa um
+# bom fit de produto carregar a prioridade mesmo sem ser AI-native.
+MATURITY_MAP = {"AI-native": 1.0, "AI-enabled": 0.65, "Non-AI": 0.30}
 CONF_MAP = {"high": 1.0, "medium": 0.6, "low": 0.2}
-# rerank_score do Cohere a partir do qual o fit é considerado "cheio" (1.0).
-# Calibrado pela observação dos scores reais (raramente passam de ~0.6).
-FIT_CAP = 0.60
 
-W_MATURITY = 0.40
-W_FIT = 0.35
+W_MATURITY = 0.30
+W_FIT = 0.45
 W_EVIDENCE = 0.25
 
 # Cortes de faixa para leitura rápida (cor na interface).
@@ -64,9 +65,12 @@ def _tier(score: int) -> Tier:
 
 def _compute(name: str, label: str, class_conf: str, val_conf: str,
              best_fit: float) -> FitScore:
-    """Aplica a fórmula a UMA startup. Cada eixo é explícito e auditável."""
-    maturity = MATURITY_MAP.get(label, 0.1)
-    fit = min(best_fit / FIT_CAP, 1.0) if best_fit > 0 else 0.0
+    """Aplica a fórmula a UMA startup. Cada eixo é explícito e auditável.
+
+    `best_fit`: melhor fit produto×empresa do catálogo, em 0..1 (já é o fit de
+    produto normalizado — não há mais cap de rerank a aplicar aqui)."""
+    maturity = MATURITY_MAP.get(label, 0.3)
+    fit = max(0.0, min(best_fit, 1.0))
     # Evidência = média da confiança da classificação e da validação de fontes.
     evidence = (CONF_MAP.get(class_conf, 0.2) + CONF_MAP.get(val_conf, 0.2)) / 2
 
@@ -85,7 +89,7 @@ def _compute(name: str, label: str, class_conf: str, val_conf: str,
         },
         rationale=(
             f"Maturidade {label} ({maturity:.2f}) · fit NVIDIA {fit:.2f} "
-            f"(melhor rerank {best_fit:.3f}) · evidências {evidence:.2f} "
+            f"(melhor produto {round(fit * 100)}/100) · evidências {evidence:.2f} "
             f"(classif. {class_conf} / validação {val_conf})"
         ),
     )
@@ -105,8 +109,9 @@ def fit_score_node(state: RadarState) -> dict:
         val_conf = v["validation_confidence"]
 
         rec = recs_por_nome.get(name)
+        # Melhor fit produto×empresa (0..100 no catálogo) -> normaliza para 0..1.
         best_fit = (
-            max((t["relevance_score"] for t in rec["technologies"]), default=0.0)
+            max((t["fit"] for t in rec["technologies"]), default=0) / 100
             if rec else 0.0
         )
         scores.append(_compute(name, label, class_conf, val_conf, best_fit))

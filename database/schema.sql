@@ -20,6 +20,13 @@ CREATE TABLE IF NOT EXISTS startups (
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Detalhe da qualificação (alimenta o dropdown da página Qualificadas).
+-- ADD COLUMN IF NOT EXISTS torna a migração idempotente: bancos já criados
+-- ganham as colunas na próxima aplicação do schema, sem recriar a tabela.
+ALTER TABLE startups ADD COLUMN IF NOT EXISTS description     TEXT;   -- sobre a empresa
+ALTER TABLE startups ADD COLUMN IF NOT EXISTS recommendations JSONB;  -- produtos NVIDIA + fit
+ALTER TABLE startups ADD COLUMN IF NOT EXISTS briefing        TEXT;   -- briefing executivo (markdown)
+
 -- Funil de qualificação (Kanban — página Qualificadas)
 CREATE TABLE IF NOT EXISTS pipeline_stages (
     id          SERIAL PRIMARY KEY,

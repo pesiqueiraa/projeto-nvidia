@@ -12,7 +12,7 @@ Docs em:   http://localhost:8000/docs
 """
 import json
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from loguru import logger
@@ -210,6 +210,16 @@ def list_startups(limit: int = 200) -> dict:
     qualificado e persistido — rápido e sem custo de LLM.
     """
     return {"startups": repo.list_startups(limit)}
+
+
+@app.get("/api/startups/{name}", tags=["startups"])
+def get_startup(name: str) -> dict:
+    """Detalhe de uma startup (dropdown da página Qualificadas): sobre a empresa,
+    produtos NVIDIA compatíveis e o briefing executivo. 404 se não existir."""
+    detalhe = repo.get_startup(name)
+    if detalhe is None:
+        raise HTTPException(status_code=404, detail=f"startup '{name}' não encontrada")
+    return detalhe
 
 
 @app.get("/api/analytics", tags=["startups"])

@@ -19,6 +19,7 @@ from pathlib import Path
 import psycopg
 from loguru import logger
 from psycopg.rows import dict_row
+from psycopg.types.json import Json
 
 from core.config import settings
 from core.sectors import bucket_sectors
@@ -49,10 +50,14 @@ def rows_from_state(state: dict) -> list[dict]:
     Função PURA — testável sem banco.
     """
     fit_por_nome = {f["name"]: f for f in state.get("fit_scores", [])}
+    rec_por_nome = {r["name"]: r for r in state.get("recommendations", [])}
+    brief_por_nome = {b["name"]: b for b in state.get("briefings", [])}
     linhas: list[dict] = []
     for c in state.get("classified_startups", []):
         s = c["startup"]
         fit = fit_por_nome.get(s["name"])
+        rec = rec_por_nome.get(s["name"])
+        brief = brief_por_nome.get(s["name"])
         linhas.append({
             "name": s["name"],
             "sector": s.get("sector"),
@@ -61,6 +66,10 @@ def rows_from_state(state: dict) -> list[dict]:
             "classification": c["label"],
             "confidence": _CONF_NUM.get(c["confidence"], 0.2),
             "fit_score": fit["score"] if fit else None,
+            # Detalhe para o dropdown da página Qualificadas:
+            "description": s.get("description"),
+            "recommendations": rec,                       # rec completo (produtos + fit)
+            "briefing": brief["markdown"] if brief else None,
         })
     return linhas
 
@@ -82,23 +91,31 @@ def save_startups(linhas: list[dict]) -> int:
     """UPSERT das startups por nome. Retorna quantas foram gravadas."""
     if not linhas:
         return 0
+    # `recommendations` é JSONB: o adapter Json() serializa o dict/lista Python.
+    # Mantém `rows_from_state` puro (sem psycopg) — o wrap mora só aqui.
+    params = [{**l, "recommendations": Json(l.get("recommendations"))} for l in linhas]
     with get_conn() as conn, conn.cursor() as cur:
         cur.executemany(
             """
             INSERT INTO startups
-                (name, sector, stage, funding, classification, confidence, fit_score)
+                (name, sector, stage, funding, classification, confidence,
+                 fit_score, description, recommendations, briefing)
             VALUES
                 (%(name)s, %(sector)s, %(stage)s, %(funding)s,
-                 %(classification)s, %(confidence)s, %(fit_score)s)
+                 %(classification)s, %(confidence)s, %(fit_score)s,
+                 %(description)s, %(recommendations)s, %(briefing)s)
             ON CONFLICT (name) DO UPDATE SET
-                sector         = EXCLUDED.sector,
-                stage          = EXCLUDED.stage,
-                funding        = EXCLUDED.funding,
-                classification = EXCLUDED.classification,
-                confidence     = EXCLUDED.confidence,
-                fit_score      = EXCLUDED.fit_score
+                sector          = EXCLUDED.sector,
+                stage           = EXCLUDED.stage,
+                funding         = EXCLUDED.funding,
+                classification  = EXCLUDED.classification,
+                confidence      = EXCLUDED.confidence,
+                fit_score       = EXCLUDED.fit_score,
+                description     = EXCLUDED.description,
+                recommendations = EXCLUDED.recommendations,
+                briefing        = EXCLUDED.briefing
             """,
-            linhas,
+            params,
         )
         conn.commit()
         return len(linhas)
@@ -129,6 +146,23 @@ def list_startups(limit: int = 200) -> list[dict]:
             (limit,),
         )
         return cur.fetchall()
+
+
+def get_startup(name: str) -> dict | None:
+    """Detalhe de UMA startup (dropdown da página Qualificadas): além dos campos
+    da lista, traz descrição, produtos NVIDIA recomendados e o briefing. `None`
+    se não existir. O JSONB `recommendations` volta já desserializado em dict."""
+    with get_conn() as conn, conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT name, sector, stage, funding, classification, confidence,
+                   fit_score, description, recommendations, briefing, created_at
+            FROM startups
+            WHERE name = %s
+            """,
+            (name,),
+        )
+        return cur.fetchone()
 
 
 def analytics() -> dict:

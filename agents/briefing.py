@@ -89,11 +89,15 @@ def _render_briefing(rec: dict, validated: dict | None,
     if rec["technologies"]:
         for t in rec["technologies"]:
             linhas += [
-                f"- **{t['tech']}** — relevância {t['relevance_score']:.3f}, "
-                f"confiança {t['confidence']}",
-                f"  > {t['snippet']}",
-                f"  Fonte: {t['url']}",
+                f"- **{t['tech']}** — fit {t['fit']}/100 (confiança {t['confidence']})",
+                f"  {t.get('summary', '')}",
+                f"  _Como ajuda a crescer:_ {t.get('growth', '')}",
             ]
+            if t.get("matched_signals"):
+                linhas.append(f"  Sinais: {', '.join(t['matched_signals'])}")
+            if t.get("snippet"):
+                linhas.append(f"  > {t['snippet']}")
+            linhas.append(f"  Fonte: {t['url']}")
     else:
         linhas.append("_Nenhuma tecnologia NVIDIA com fit suficiente identificada._")
     for nota in rec.get("notes", []):
