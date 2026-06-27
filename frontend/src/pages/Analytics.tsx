@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Analytics as AnalyticsData, getAnalytics, labelClass, tierClass } from "../api";
+import { Analytics as AnalyticsData, getAnalytics, labelClass } from "../api";
 
 // Página Analytics (ux.md §6.5): visão AGREGADA do ecossistema, lida do banco.
 // Só existe porque os resultados do pipeline são persistidos — é a prova de que
@@ -61,7 +61,6 @@ export default function Analytics() {
 
   const maxClass = Math.max(1, ...(data?.by_classification.map((d) => d.count) ?? [1]));
   const maxSector = Math.max(1, ...(data?.by_sector.map((d) => d.count) ?? [1]));
-  const maxTier = Math.max(1, ...(data?.by_tier.map((d) => d.count) ?? [1]));
 
   return (
     <div className="page">
@@ -87,10 +86,6 @@ export default function Analytics() {
               <div className="kpi-num">{data.total}</div>
               <div className="kpi-lbl">startups qualificadas</div>
             </div>
-            <div className="kpi">
-              <div className="kpi-num">{data.avg_fit ?? "—"}</div>
-              <div className="kpi-lbl">fit score médio</div>
-            </div>
           </div>
 
           <div className="an-card">
@@ -102,15 +97,6 @@ export default function Analytics() {
               }))}
               max={maxClass}
               colorOf={(l) => fillClass(labelClass(l))}
-            />
-          </div>
-
-          <div className="an-card">
-            <div className="section-lbl">Prioridade (faixa de Fit)</div>
-            <BarList
-              data={data.by_tier.map((d) => ({ label: d.tier, count: d.count }))}
-              max={maxTier}
-              colorOf={(l) => fillClass(tierClass(l))}
             />
           </div>
 

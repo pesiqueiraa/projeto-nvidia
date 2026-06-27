@@ -45,24 +45,22 @@ def test_recomendar_usa_catalogo_e_template_sem_llm():
     techs = [t.tech for t in rec.technologies]
     assert "NVIDIA RAPIDS" in techs          # produto de dado p/ empresa data-heavy
     rapids = next(t for t in rec.technologies if t.tech == "NVIDIA RAPIDS")
-    assert rapids.fit > 0
     assert rapids.growth                      # template do catálogo preenche
     assert any("Non-AI" in n for n in rec.notes)
 
 
-def test_recomendar_sem_fit_retorna_vazio():
+def test_recomendar_sem_aderencia_retorna_vazio():
     s = _startup("Padaria", description="pães artesanais de bairro")
     rec = _recomendar("Padaria", "Non-AI", s, [], usar_llm=False)
     assert rec.technologies == []
     assert rec.notes and "nenhum produto" in rec.notes[0]
 
 
-def test_recomendar_ordena_por_fit_desc():
+def test_recomendar_define_confianca_geral_pela_primeira():
     s = _startup("Voz", sector="Software/SaaS",
                  description="assistente de voz com llm para call center e transcrição")
     rec = _recomendar("Voz", "AI-native", s, [], usar_llm=False)
-    fits = [t.fit for t in rec.technologies]
-    assert fits == sorted(fits, reverse=True)
+    assert rec.technologies                    # achou produtos aderentes
     assert rec.overall_confidence == rec.technologies[0].confidence
 
 

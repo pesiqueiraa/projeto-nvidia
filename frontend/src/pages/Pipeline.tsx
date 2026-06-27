@@ -1,17 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  confClass,
-  labelClass,
-  PipelineResult,
-  StageInfo,
-  streamPipeline,
-  tierClass,
-} from "../api";
+import { confClass, labelClass, PipelineResult, StageInfo, streamPipeline } from "../api";
 
 // Página Pipeline (ux.md §6.5): o gestor digita uma consulta, dispara o
 // pipeline multi-agente no backend (POST /api/pipeline/stream) e acompanha, em
-// tempo real, o stepper de estágios — depois vê as startups qualificadas com o
-// Fit Score, a stack NVIDIA recomendada e a confiança.
+// tempo real, o stepper de estágios — depois vê as startups qualificadas com a
+// stack NVIDIA recomendada e a confiança.
 
 type StageStatus = "pending" | "running" | "done";
 interface StepState extends StageInfo {
@@ -98,9 +91,8 @@ export default function Pipeline() {
     }
   }
 
-  // Junta o retrato classificado e o fit score à recomendação, por nome.
+  // Junta o retrato classificado à recomendação, por nome.
   const porNome = new Map(result?.classified_startups.map((c) => [c.startup.name, c]));
-  const fitPorNome = new Map(result?.fit_scores.map((f) => [f.name, f]));
 
   return (
     <div className="page">
@@ -160,17 +152,11 @@ export default function Pipeline() {
 
       {result?.recommendations.map((rec) => {
         const c = porNome.get(rec.name);
-        const fit = fitPorNome.get(rec.name);
         return (
           <div className="card" key={rec.name}>
             <div className="card-head">
               <h2>{rec.name}</h2>
               <span className={`badge ${labelClass(rec.label)}`}>{rec.label}</span>
-              {fit && (
-                <span className={`badge fit ${tierClass(fit.tier)}`}>
-                  Fit {fit.score}/100
-                </span>
-              )}
             </div>
 
             {c && (
@@ -185,12 +171,12 @@ export default function Pipeline() {
             <div className="section-lbl">
               Stack NVIDIA recomendada
               <span className={`badge ${confClass(rec.overall_confidence)}`}>
-                fit {rec.overall_confidence}
+                confiança {rec.overall_confidence}
               </span>
             </div>
 
             {rec.technologies.length === 0 && (
-              <div className="muted">Nenhuma tecnologia com fit suficiente.</div>
+              <div className="muted">Nenhuma tecnologia aderente ao perfil.</div>
             )}
             {rec.technologies.map((t) => (
               <div className="tech" key={t.tech}>

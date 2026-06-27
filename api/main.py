@@ -91,7 +91,6 @@ def pipeline_run(req: PipelineRequest) -> dict:
         "sources": final_state.get("sources", []),
         "classified_startups": final_state.get("classified_startups", []),
         "recommendations": final_state.get("recommendations", []),
-        "fit_scores": final_state.get("fit_scores", []),
         "briefings": final_state.get("briefings", []),
         "persisted": salvas,
         "trace": [str(m) for m in final_state.get("messages", [])],
@@ -113,7 +112,6 @@ PIPELINE_STAGES: list[tuple[str, str]] = [
     ("evidence_validator", "Validando evidências"),
     ("rag", "Consultando base NVIDIA"),
     ("recommendation", "Recomendando stack NVIDIA"),
-    ("fit_score", "Calculando Fit Score"),
     ("briefing", "Gerando briefings"),
 ]
 _STAGE_LABELS = dict(PIPELINE_STAGES)
@@ -184,7 +182,6 @@ def pipeline_stream(req: PipelineRequest) -> StreamingResponse:
                     "sources": final_state.get("sources", []),
                     "classified_startups": final_state.get("classified_startups", []),
                     "recommendations": final_state.get("recommendations", []),
-                    "fit_scores": final_state.get("fit_scores", []),
                     "briefings": final_state.get("briefings", []),
                     "persisted": salvas,
                     "trace": [str(m) for m in final_state.get("messages", [])],
@@ -224,6 +221,6 @@ def get_startup(name: str) -> dict:
 
 @app.get("/api/analytics", tags=["startups"])
 def analytics() -> dict:
-    """Visão agregada do ecossistema (página Analytics): totais, distribuição
-    por maturidade de IA, por faixa de fit e por setor."""
+    """Visão agregada do ecossistema (página Analytics): total, distribuição
+    por maturidade de IA e por setor."""
     return repo.analytics()

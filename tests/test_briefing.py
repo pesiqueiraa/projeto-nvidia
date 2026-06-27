@@ -25,7 +25,7 @@ def _rec(name, label="AI-native", techs=None, overall="medium", notes=None):
         "technologies": techs if techs is not None else [{
             "tech": "NeMo Guardrails", "url": "https://nv/guardrails",
             "summary": "segurança e conformidade para apps com LLM",
-            "fit": 72, "confidence": "medium",
+            "confidence": "medium",
             "matched_signals": ["jurídic", "compliance"],
             "relevance_score": 0.402, "growth": "reduz risco regulatório ao operar LLMs",
             "snippet": "rails de segurança para LLMs",
@@ -35,25 +35,22 @@ def _rec(name, label="AI-native", techs=None, overall="medium", notes=None):
 
 
 def test_briefing_tem_no_maximo_dois_paragrafos():
-    md = _render_briefing(_rec("ChatJurix"), _validated("ChatJurix"),
-                          fit={"score": 88, "tier": "alto"})
+    md = _render_briefing(_rec("ChatJurix"), _validated("ChatJurix"))
     paragrafos = [p for p in md.split("\n\n") if p.strip()]
     assert len(paragrafos) <= 2
 
 
 def test_briefing_traz_empresa_diagnostico_e_recomendacao():
-    md = _render_briefing(_rec("ChatJurix"), _validated("ChatJurix"),
-                          fit={"score": 88, "tier": "alto"})
+    md = _render_briefing(_rec("ChatJurix"), _validated("ChatJurix"))
     assert "ChatJurix" in md
     assert "AI-native" in md             # diagnóstico
-    assert "88/100" in md                # fit Inception
     assert "NeMo Guardrails" in md       # produto recomendado
     assert "risco regulatório" in md     # como ajuda a crescer
 
 
 def test_briefing_cita_no_maximo_dois_produtos():
     techs = [
-        {"tech": f"Prod{i}", "url": "u", "summary": "s", "fit": 90 - i,
+        {"tech": f"Prod{i}", "url": "u", "summary": "s",
          "confidence": "high", "matched_signals": [], "relevance_score": 0.0,
          "growth": f"ajuda {i}", "snippet": ""}
         for i in range(4)

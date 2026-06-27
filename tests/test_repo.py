@@ -18,20 +18,15 @@ def _state():
                          "stage": None, "funding": None},
              "label": "Non-AI", "rationale": "x", "confidence": "low"},
         ],
-        "fit_scores": [
-            {"name": "ChatJurix", "score": 88},
-            {"name": "LogiBox", "score": 30},
-        ],
     }
 
 
-def test_rows_from_state_junta_classificacao_e_fit():
+def test_rows_from_state_junta_classificacao():
     rows = rows_from_state(_state())
     chat = next(r for r in rows if r["name"] == "ChatJurix")
 
     assert chat["classification"] == "AI-native"
     assert chat["sector"] == "legaltech"
-    assert chat["fit_score"] == 88
     assert chat["confidence"] == 1.0  # high -> 1.0
 
 
@@ -39,20 +34,6 @@ def test_rows_from_state_mapeia_confianca_para_numerico():
     rows = rows_from_state(_state())
     logi = next(r for r in rows if r["name"] == "LogiBox")
     assert logi["confidence"] == 0.2  # low -> 0.2
-    assert logi["fit_score"] == 30
-
-
-def test_rows_from_state_sem_fit_correspondente_fica_none():
-    state = {
-        "classified_startups": [
-            {"startup": {"name": "SemFit", "sector": "x"},
-             "label": "Non-AI", "rationale": "y", "confidence": "medium"},
-        ],
-        "fit_scores": [],  # nenhum fit
-    }
-    rows = rows_from_state(state)
-    assert rows[0]["fit_score"] is None
-    assert rows[0]["confidence"] == 0.6  # medium -> 0.6
 
 
 def test_rows_from_state_inclui_detalhe_para_o_dropdown():
@@ -62,10 +43,9 @@ def test_rows_from_state_inclui_detalhe_para_o_dropdown():
                          "description": "assistente jurídico com LLM"},
              "label": "AI-native", "rationale": "x", "confidence": "high"},
         ],
-        "fit_scores": [{"name": "ChatJurix", "score": 88}],
         "recommendations": [
             {"name": "ChatJurix", "label": "AI-native",
-             "technologies": [{"tech": "NVIDIA NIM", "fit": 60}],
+             "technologies": [{"tech": "NVIDIA NIM"}],
              "overall_confidence": "high", "notes": []},
         ],
         "briefings": [{"name": "ChatJurix", "label": "AI-native",

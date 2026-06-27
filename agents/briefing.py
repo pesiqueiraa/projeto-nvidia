@@ -11,8 +11,8 @@ Por que DETERMINÍSTICO (sem LLM) e não gerado por modelo:
     abriria espaço para alucinação justo no produto entregue — risco que não se
     justifica aqui. Montamos o markdown a partir dos dados estruturados.
   - Sinalizar SEMPRE o nível de confiança é exigência do projeto (CLAUDE.md):
-    o briefing consolida os três sinais (evidência textual, validação de
-    fontes, fit NVIDIA) num só lugar.
+    o briefing consolida os sinais de evidência (textual e validação de
+    fontes) num só lugar.
   Uma camada de NARRATIVA via LLM (resumo executivo em prosa por cima dos
   fatos) é o aprimoramento natural seguinte — análogo à versão LLM do
   Recommendation Agent.
@@ -41,20 +41,19 @@ def _cap(texto: str) -> str:
     return t[:1].upper() + t[1:] if t else t
 
 
-def _render_briefing(rec: dict, validated: dict | None,
-                     fit: dict | None = None) -> str:
+def _render_briefing(rec: dict, validated: dict | None) -> str:
     """Monta um briefing CURTO de recomendação (no máximo 2 parágrafos).
 
     Mudança de design: o briefing deixou de ser um relatório longo com várias
     seções (a página Qualificadas já mostra "Sobre a empresa" e "Produtos
     compatíveis" em separado). Aqui é uma NARRATIVA enxuta para a NVIDIA:
-      - Parágrafo 1: quem é a empresa + diagnóstico (maturidade + fit Inception).
+      - Parágrafo 1: quem é a empresa + diagnóstico de maturidade de IA.
       - Parágrafo 2: a recomendação de produtos NVIDIA e por que ajudam a crescer.
     Continua DETERMINÍSTICO (montado dos dados estruturados, sem LLM e sem
     alucinação) e usa **negrito** leve — o frontend renderiza formatado.
 
     `rec` é um StartupRecommendation serializado; `validated` é o
-    ValidatedStartup correspondente (ou None); `fit` é o FitScore (ou None).
+    ValidatedStartup correspondente (ou None).
     """
     name = rec["name"]
     label = rec["label"]
@@ -75,9 +74,6 @@ def _render_briefing(rec: dict, validated: dict | None,
             p1 += f" {_cap(startup['description'].rstrip('.'))}."
     else:
         p1 += f" é classificada como **{label}**."
-    if fit is not None:
-        p1 += (f" Fit Score Inception: **{fit['score']}/100** "
-               f"(prioridade {fit['tier']}).")
 
     # --- Parágrafo 2: recomendação NVIDIA (curta) ---
     techs = rec.get("technologies", [])[:_MAX_PRODUTOS_BRIEFING]
@@ -89,28 +85,25 @@ def _render_briefing(rec: dict, validated: dict | None,
         for nota in rec.get("notes", []):
             p2 += f" {_cap(nota.rstrip('.'))}."
     else:
-        p2 = ("Nenhum produto NVIDIA apresentou fit suficiente para o perfil "
-              "atual — recomenda-se reavaliar após enriquecer os dados da empresa.")
+        p2 = ("Nenhum produto NVIDIA aderente ao perfil atual foi identificado "
+              "— recomenda-se reavaliar após enriquecer os dados da empresa.")
 
     return f"{p1}\n\n{p2}"
 
 
 def briefing_node(state: RadarState) -> dict:
-    """Nó 9 do grafo: gera o relatório executivo final por startup."""
+    """Nó final do grafo: gera o relatório executivo por startup."""
     recomendacoes = state.get("recommendations", [])
     validadas = state.get("validated_startups", [])
-    # Junta o validated (identidade/classificação) e o fit score à
-    # recomendação, ambos keyed por nome.
+    # Junta o validated (identidade/classificação) à recomendação, por nome.
     val_por_nome = {
         v["classified"]["startup"]["name"]: v for v in validadas
     }
-    fit_por_nome = {f["name"]: f for f in state.get("fit_scores", [])}
 
     briefings: list[Briefing] = []
     for rec in recomendacoes:
         validated = val_por_nome.get(rec["name"])
-        fit = fit_por_nome.get(rec["name"])
-        markdown = _render_briefing(rec, validated, fit)
+        markdown = _render_briefing(rec, validated)
         briefings.append(Briefing(name=rec["name"], label=rec["label"], markdown=markdown))
 
     logger.info("briefing: {} relatórios gerados", len(briefings))

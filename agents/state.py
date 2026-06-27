@@ -65,12 +65,6 @@ class RadarState(TypedDict, total=False):
     # StartupRecommendation serializado — insumo do Briefing Agent.
     recommendations: list[dict]
 
-    # Saída do Fit Score Agent (DIFERENCIAL): o Fit Score com o Inception
-    # (0–100) de cada startup, JÁ RANKEADO por prioridade. Cada item é um
-    # FitScore serializado {name, label, score, tier, breakdown, rationale}.
-    # Calculado antes do briefing (que cita o score) e exposto na interface.
-    fit_scores: list[dict]
-
     # Saída do Briefing Agent: o relatório executivo final por startup, em
     # markdown, juntando identidade + classificação + validação + stack NVIDIA
     # recomendada (com citações) + fit score + sinal de confiança. Cada item é

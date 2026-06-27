@@ -37,13 +37,12 @@ não reordene nem descarte produtos. Devolva um item por produto recebido."""
 
 
 class TechRecommendation(BaseModel):
-    """Uma tecnologia NVIDIA recomendada, com fit, citação e tese de crescimento."""
+    """Uma tecnologia NVIDIA recomendada, com citação e tese de crescimento."""
 
     tech: str
     url: str
     summary: str                 # o que o produto faz
-    fit: int                     # 0..100 — fit produto×empresa (regra)
-    confidence: Confidence       # faixa de confiança do fit
+    confidence: Confidence       # faixa de confiança do match
     matched_signals: list[str]   # gatilhos do perfil que casaram (transparência)
     relevance_score: float       # melhor rerank do RAG (apoio/citação)
     growth: str                  # COMO ajuda a empresa a crescer (LLM ou template)
@@ -123,38 +122,37 @@ def _recomendar(name: str, label: str, startup: dict,
                 chunks: list[dict], usar_llm: bool = True) -> StartupRecommendation:
     """Aplica catálogo (regras) + LLM (narrativa) a UMA startup."""
     sem_por_tech, snip_por_tech = _semantica_por_tech(chunks)
-    fits = score_products(
+    produtos = score_products(
         _perfil_texto(startup), startup.get("sector"), label, sem_por_tech
     )
 
-    if not fits:
+    if not produtos:
         return StartupRecommendation(
             name=name, label=label,
-            notes=["nenhum produto NVIDIA com fit suficiente para este perfil"],
+            notes=["nenhum produto NVIDIA aderente a este perfil"],
         )
 
     # LLM escreve o 'como ajuda a crescer' (com fallback na tese do catálogo).
-    growth_por_tech = _escrever_crescimento(startup, fits) if usar_llm else {}
+    growth_por_tech = _escrever_crescimento(startup, produtos) if usar_llm else {}
 
     techs = [
         TechRecommendation(
-            tech=f.tech,
-            url=f.url,
-            summary=f.summary,
-            fit=f.fit,
-            confidence=f.confidence,
-            matched_signals=f.matched_signals,
-            relevance_score=f.semantic_score,
-            growth=growth_por_tech.get(f.tech, f.growth_thesis),
-            snippet=snip_por_tech.get(f.tech, ""),
+            tech=p.tech,
+            url=p.url,
+            summary=p.summary,
+            confidence=p.confidence,
+            matched_signals=p.matched_signals,
+            relevance_score=p.semantic_score,
+            growth=growth_por_tech.get(p.tech, p.growth_thesis),
+            snippet=snip_por_tech.get(p.tech, ""),
         )
-        for f in fits
+        for p in produtos
     ]
 
     notes: list[str] = []
     if label == "Non-AI":
         notes.append(
-            "startup Non-AI: priorize os produtos de dado/infra (maior fit); "
+            "startup Non-AI: priorize os produtos de dado/infra; "
             "os de IA generativa são uma aposta de evolução"
         )
 

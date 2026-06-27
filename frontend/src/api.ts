@@ -5,7 +5,6 @@ export interface TechRec {
   tech: string;
   url: string;
   summary: string;
-  fit: number; // 0..100 — fit produto×empresa (catálogo de regras)
   confidence: string;
   matched_signals: string[];
   relevance_score: number; // melhor rerank do RAG (apoio/citação)
@@ -32,19 +31,10 @@ export interface Classified {
   rationale: string;
   confidence: string;
 }
-export interface FitScoreItem {
-  name: string;
-  label: string;
-  score: number;
-  tier: string;
-  breakdown: { maturity: number; nvidia_fit: number; evidence: number };
-  rationale: string;
-}
 export interface PipelineResult {
   query: string;
   classified_startups: Classified[];
   recommendations: Recommendation[];
-  fit_scores: FitScoreItem[];
   briefings: { name: string; label: string; markdown: string }[];
   trace: string[];
 }
@@ -57,7 +47,6 @@ export interface StartupRow {
   funding: string | null;
   classification: string;
   confidence: number;
-  fit_score: number | null;
   created_at: string;
 }
 
@@ -70,7 +59,7 @@ export async function listStartups(): Promise<StartupRow[]> {
 // Detalhe de uma startup persistida (dropdown da página Qualificadas).
 export interface StartupDetail extends StartupRow {
   description: string | null;
-  recommendations: Recommendation | null; // produtos NVIDIA + fit/growth
+  recommendations: Recommendation | null; // produtos NVIDIA recomendados
   briefing: string | null; // briefing executivo em markdown
 }
 
@@ -83,10 +72,8 @@ export async function getStartup(name: string): Promise<StartupDetail> {
 // Agregados do ecossistema (página Analytics).
 export interface Analytics {
   total: number;
-  avg_fit: number | null;
   by_classification: { classification: string; count: number }[];
   by_sector: { sector: string; count: number }[];
-  by_tier: { tier: string; count: number }[];
 }
 
 export async function getAnalytics(): Promise<Analytics> {
@@ -163,10 +150,5 @@ export function labelClass(label: string): string {
 export function confClass(conf: string): string {
   if (conf === "high") return "badge-green";
   if (conf === "medium") return "badge-amber";
-  return "badge-red";
-}
-export function tierClass(tier: string): string {
-  if (tier === "alto") return "badge-green";
-  if (tier === "médio") return "badge-amber";
   return "badge-red";
 }

@@ -11,14 +11,7 @@ import {
 // Página Qualificadas (ux.md §6.5): o FUNIL acumulado. Diferente da Pipeline
 // (que roda os agentes), aqui só LEMOS as startups já qualificadas e salvas no
 // banco. Cada linha EXPANDE num dropdown com: sobre a empresa, os produtos
-// NVIDIA compatíveis (com fit) e o briefing executivo — carregado sob demanda.
-
-function tierFromScore(score: number | null): string {
-  if (score === null) return "badge-dim";
-  if (score >= 70) return "badge-green";
-  if (score >= 40) return "badge-amber";
-  return "badge-red";
-}
+// NVIDIA compatíveis e o briefing executivo — carregado sob demanda.
 
 // Renderiza **negrito** dentro de um parágrafo (sem lib de markdown).
 function renderInline(texto: string) {
@@ -69,7 +62,7 @@ function DetailPanel({
 
       <div className="section-lbl">Produtos NVIDIA compatíveis</div>
       {techs.length === 0 && (
-        <div className="muted">Nenhum produto com fit suficiente para este perfil.</div>
+        <div className="muted">Nenhum produto NVIDIA aderente a este perfil.</div>
       )}
       {techs.map((t) => (
         <div className="tech" key={t.tech}>
@@ -166,7 +159,8 @@ export default function Qualificadas() {
       <div className="qual-head">
         <p className="hint">
           Startups já qualificadas e persistidas (acumuladas entre execuções do
-          pipeline), ordenadas por Fit Score. Clique numa linha para ver o detalhe.
+          pipeline), das mais recentes para as mais antigas. Clique numa linha
+          para ver o detalhe.
         </p>
         <button className="btn-primary" onClick={load} disabled={loading}>
           {loading ? "Atualizando…" : "Atualizar"}
@@ -190,7 +184,6 @@ export default function Qualificadas() {
               <th>Setor</th>
               <th>Estágio</th>
               <th>Classificação</th>
-              <th className="num">Fit</th>
             </tr>
           </thead>
           <tbody>
@@ -212,15 +205,10 @@ export default function Qualificadas() {
                         {s.classification}
                       </span>
                     </td>
-                    <td className="num">
-                      <span className={`badge ${tierFromScore(s.fit_score)}`}>
-                        {s.fit_score ?? "—"}
-                      </span>
-                    </td>
                   </tr>
                   {aberta && (
                     <tr className="qual-detail-row">
-                      <td colSpan={5}>
+                      <td colSpan={4}>
                         <DetailPanel
                           detail={details[s.name]}
                           loading={detailLoading === s.name}

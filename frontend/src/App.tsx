@@ -3,7 +3,6 @@ import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Placeholder from "./pages/Placeholder";
 import Pipeline from "./pages/Pipeline";
-import FitScore from "./pages/FitScore";
 import Qualificadas from "./pages/Qualificadas";
 import Analytics from "./pages/Analytics";
 
@@ -21,7 +20,6 @@ export default function App() {
           <Route path="/pipeline" element={<Pipeline />} />
           <Route path="/qualificadas" element={<Qualificadas />} />
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/fit-score" element={<FitScore />} />
           <Route path="/sinais" element={<Placeholder titulo="Sinais de Evolução" />} />
         </Routes>
       </div>

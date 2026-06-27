@@ -22,9 +22,9 @@ def test_health_ok():
 def test_graph_runs_full_pipeline_to_briefing(
     patch_get_llm, patch_scraper_offline, fixed_search_plan
 ):
-    """O grafo de 10 nós executa o pipeline completo: search_planner (LLM falso)
-    -> scraper -> enricher -> extractor -> classifier -> evidence_validator ->
-    rag -> recommendation -> fit_score -> briefing.
+    """O grafo executa o pipeline completo: search_planner (LLM falso)
+    -> scraper -> relevance -> enricher -> extractor -> classifier ->
+    evidence_validator -> rag -> recommendation -> briefing.
 
     Roda OFFLINE: `patch_scraper_offline` faz toda fonte resolver "sem adapter",
     então o scraper não toca a rede; cada etapa seguinte recebe lista vazia e
@@ -44,14 +44,13 @@ def test_graph_runs_full_pipeline_to_briefing(
     # cauda do pipeline rodou sem startups -> vazios (e nada de rede)
     assert final["rag_contexts"] == []
     assert final["recommendations"] == []
-    assert final["fit_scores"] == []
     assert final["briefings"] == []
     # validator rodou uma vez; lista vazia -> seguiu pela cauda do pipeline e END
     assert final["validation_attempts"] == 1
     # messages (reducer add_messages): 1 planner + 1 por fonte (scraper)
     # + relevance + enricher + extractor + classifier + evidence_validator
-    # + rag + recommendation + fit_score + briefing
-    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
+    # + rag + recommendation + briefing
+    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
 
 
 def test_demo_plan_endpoint(patch_get_llm, patch_scraper_offline, fixed_search_plan):

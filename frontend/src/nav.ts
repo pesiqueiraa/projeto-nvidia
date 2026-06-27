@@ -1,4 +1,4 @@
-// Fonte única das 5 páginas (ux.md §1 e §6.5). Usada pela sidebar e pela
+// Fonte única das páginas (ux.md §1 e §6.5). Usada pela sidebar e pela
 // topbar para manter título/subtítulo sincronizados com a rota ativa.
 export interface NavEntry {
   path: string;
@@ -28,12 +28,6 @@ export const NAV: NavEntry[] = [
     group: "operacional",
   },
   // Módulos de inteligência
-  {
-    path: "/fit-score",
-    label: "Score de Fit",
-    subtitle: "Priorização objetiva por potencial NVIDIA",
-    group: "inteligencia",
-  },
   {
     path: "/sinais",
     label: "Sinais de Evolução",

@@ -49,13 +49,11 @@ def rows_from_state(state: dict) -> list[dict]:
     Junta a classificação (label, confiança, identidade) ao fit score, por nome.
     Função PURA — testável sem banco.
     """
-    fit_por_nome = {f["name"]: f for f in state.get("fit_scores", [])}
     rec_por_nome = {r["name"]: r for r in state.get("recommendations", [])}
     brief_por_nome = {b["name"]: b for b in state.get("briefings", [])}
     linhas: list[dict] = []
     for c in state.get("classified_startups", []):
         s = c["startup"]
-        fit = fit_por_nome.get(s["name"])
         rec = rec_por_nome.get(s["name"])
         brief = brief_por_nome.get(s["name"])
         linhas.append({
@@ -65,10 +63,9 @@ def rows_from_state(state: dict) -> list[dict]:
             "funding": s.get("funding"),
             "classification": c["label"],
             "confidence": _CONF_NUM.get(c["confidence"], 0.2),
-            "fit_score": fit["score"] if fit else None,
             # Detalhe para o dropdown da página Qualificadas:
             "description": s.get("description"),
-            "recommendations": rec,                       # rec completo (produtos + fit)
+            "recommendations": rec,                       # rec completo (produtos)
             "briefing": brief["markdown"] if brief else None,
         })
     return linhas
@@ -99,10 +96,10 @@ def save_startups(linhas: list[dict]) -> int:
             """
             INSERT INTO startups
                 (name, sector, stage, funding, classification, confidence,
-                 fit_score, description, recommendations, briefing)
+                 description, recommendations, briefing)
             VALUES
                 (%(name)s, %(sector)s, %(stage)s, %(funding)s,
-                 %(classification)s, %(confidence)s, %(fit_score)s,
+                 %(classification)s, %(confidence)s,
                  %(description)s, %(recommendations)s, %(briefing)s)
             ON CONFLICT (name) DO UPDATE SET
                 sector          = EXCLUDED.sector,
@@ -110,7 +107,6 @@ def save_startups(linhas: list[dict]) -> int:
                 funding         = EXCLUDED.funding,
                 classification  = EXCLUDED.classification,
                 confidence      = EXCLUDED.confidence,
-                fit_score       = EXCLUDED.fit_score,
                 description     = EXCLUDED.description,
                 recommendations = EXCLUDED.recommendations,
                 briefing        = EXCLUDED.briefing
@@ -133,14 +129,14 @@ def persist_pipeline_result(state: dict) -> int:
 
 
 def list_startups(limit: int = 200) -> list[dict]:
-    """Lista as startups acumuladas, das de maior fit para as menores."""
+    """Lista as startups acumuladas, das mais recentes para as mais antigas."""
     with get_conn() as conn, conn.cursor(row_factory=dict_row) as cur:
         cur.execute(
             """
             SELECT name, sector, stage, funding, classification,
-                   confidence, fit_score, created_at
+                   confidence, created_at
             FROM startups
-            ORDER BY fit_score DESC NULLS LAST, created_at DESC
+            ORDER BY created_at DESC
             LIMIT %s
             """,
             (limit,),
@@ -156,7 +152,7 @@ def get_startup(name: str) -> dict | None:
         cur.execute(
             """
             SELECT name, sector, stage, funding, classification, confidence,
-                   fit_score, description, recommendations, briefing, created_at
+                   description, recommendations, briefing, created_at
             FROM startups
             WHERE name = %s
             """,
@@ -169,11 +165,8 @@ def analytics() -> dict:
     """Agregados do ecossistema para a página Analytics — tudo via SQL (GROUP
     BY/AVG/CASE), expondo a mecânica do banco em vez de agregar em Python."""
     with get_conn() as conn, conn.cursor(row_factory=dict_row) as cur:
-        # KPIs base
-        cur.execute(
-            "SELECT count(*)::int AS total, round(avg(fit_score))::int AS avg_fit "
-            "FROM startups"
-        )
+        # KPI base
+        cur.execute("SELECT count(*)::int AS total FROM startups")
         base = cur.fetchone()
 
         # Distribuição por maturidade de IA
@@ -191,23 +184,8 @@ def analytics() -> dict:
         cur.execute("SELECT sector, count(*)::int AS count FROM startups GROUP BY sector")
         by_sector = bucket_sectors(cur.fetchall())
 
-        # Distribuição por faixa de Fit Score (os mesmos cortes do fit_score)
-        cur.execute(
-            """
-            SELECT CASE WHEN fit_score >= 70 THEN 'alto'
-                        WHEN fit_score >= 40 THEN 'médio'
-                        ELSE 'baixo' END AS tier,
-                   count(*)::int AS count
-            FROM startups WHERE fit_score IS NOT NULL
-            GROUP BY tier
-            """
-        )
-        by_tier = cur.fetchall()
-
     return {
         "total": base["total"],
-        "avg_fit": base["avg_fit"],
         "by_classification": by_classification,
         "by_sector": by_sector,
-        "by_tier": by_tier,
     }
