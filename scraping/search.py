@@ -18,6 +18,7 @@ Decisões de design:
     site é tratado como "sem conteúdo" (degrada para o caminho metadata), nunca
     derruba o pipeline.
 """
+import re
 from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 from bs4 import BeautifulSoup
@@ -57,8 +58,25 @@ def _decode_href(href: str) -> str:
     return href
 
 
+def _slug(s: str) -> str:
+    """Reduz a alfanumérico minúsculo, para comparar nome com domínio."""
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def _host_base(host: str) -> str:
+    """Host sem porta e sem o prefixo 'www.' (só o domínio em si)."""
+    host = host.lower().split(":")[0]
+    return host[4:] if host.startswith("www.") else host
+
+
 def search_official_site(name: str, hint: str | None = None) -> str | None:
     """Devolve a URL provável do site oficial da startup, ou None.
+
+    PRECISÃO: entre os resultados "limpos" (não-agregadores), prefere aquele cujo
+    DOMÍNIO casa com o nome da empresa (ex.: "AbacatePay" -> abacatepay.com) — é
+    o sinal mais forte de que o site é mesmo dela, evitando contaminar tudo a
+    jusante com a página errada. Só cai no 1º limpo (não verificado) se nenhum
+    domínio casar.
 
     `hint` (ex.: o setor) ajuda a desambiguar nomes comuns. Qualquer falha de
     rede/parsing vira None — o enricher trata como "sem conteúdo".
@@ -74,11 +92,27 @@ def search_official_site(name: str, hint: str | None = None) -> str | None:
         return None
 
     soup = BeautifulSoup(html, "html.parser")
+    candidatos: list[str] = []
     for a in soup.select("a.result__a"):
         url = _decode_href(a.get("href", ""))
         host = urlparse(url).netloc.lower()
         if not host or any(ruido in host for ruido in _NOISE_HOSTS):
             continue
-        logger.info("search: '{}' -> {}", name, url)
-        return url
-    return None
+        candidatos.append(url)
+
+    if not candidatos:
+        return None
+
+    # 1) VERIFICAÇÃO por domínio: nome da empresa aparece no domínio do candidato.
+    #    Guarda de nome curto (>= 4 chars) evita casar nomes genéricos por acaso.
+    nome_slug = _slug(name)
+    if len(nome_slug) >= 4:
+        for url in candidatos:
+            if nome_slug in _slug(_host_base(urlparse(url).netloc)):
+                logger.info("search: '{}' -> {} (domínio confere)", name, url)
+                return url
+
+    # 2) Sem confirmação de domínio: 1º limpo, como antes (não verificado).
+    logger.info("search: '{}' -> {} (1º limpo, domínio não confirmado)",
+                name, candidatos[0])
+    return candidatos[0]

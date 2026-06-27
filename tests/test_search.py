@@ -30,6 +30,27 @@ def test_busca_pula_ruido_e_retorna_site_oficial(patch_search):
     assert search_official_site("Salvy") == "https://salvy.com.br"
 
 
+def test_busca_prefere_dominio_que_casa_com_o_nome(monkeypatch):
+    # Um site limpo MAS errado (um blog) aparece PRIMEIRO; o oficial, cujo
+    # domínio = nome, vem depois. A verificação por domínio pula o errado.
+    html = (
+        '<a class="result__a" href="https://algumblog.com/abacatepay-review">x</a>'
+        '<a class="result__a" href="https://abacatepay.com.br">x</a>'
+    )
+    monkeypatch.setattr(search, "_fetch_search_html", lambda *a, **k: html)
+    assert search_official_site("AbacatePay") == "https://abacatepay.com.br"
+
+
+def test_busca_sem_dominio_que_casa_cai_no_primeiro_limpo(monkeypatch):
+    # Nenhum domínio casa com o nome -> mantém o comportamento antigo (1º limpo).
+    html = (
+        '<a class="result__a" href="https://www.linkedin.com/company/x">x</a>'
+        '<a class="result__a" href="https://meusiteoficial.io">x</a>'
+    )
+    monkeypatch.setattr(search, "_fetch_search_html", lambda *a, **k: html)
+    assert search_official_site("Fubango") == "https://meusiteoficial.io"
+
+
 def test_busca_nome_vazio_retorna_none():
     assert search_official_site("   ") is None
 
