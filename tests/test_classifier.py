@@ -81,7 +81,8 @@ def test_classifier_metadata_nao_chama_llm(monkeypatch):
     ]})
     c = out["classified_startups"][0]
 
-    assert c["label"] == "Non-AI"
+    # sem conteúdo -> "Indeterminado", NÃO Non-AI (não conseguimos julgar)
+    assert c["label"] == "Indeterminado"
     assert c["confidence"] == "low"
     assert "provisória" in c["rationale"]
 
@@ -105,9 +106,10 @@ def test_classifier_isola_falha_por_startup(monkeypatch):
 
     assert len(classificadas) == 2  # nenhuma startup foi perdida
     assert classificadas[0]["startup"]["name"] == "A"
-    assert classificadas[0]["label"] == "Non-AI"
+    assert classificadas[0]["label"] == "Indeterminado"  # LLM caiu -> não julgou
     assert classificadas[0]["confidence"] == "low"
     assert classificadas[1]["startup"]["name"] == "B"
+    assert classificadas[1]["label"] == "Indeterminado"  # metadata -> não julgou
 
 
 def test_classifier_nao_muta_estado_original(patch_classifier_llm):

@@ -32,7 +32,12 @@ from agents.extractor import StructuredStartup
 from agents.state import RadarState
 from core.llm import get_llm
 
-Label = Literal["AI-native", "AI-enabled", "Non-AI"]
+# Rótulos que o LLM atribui quando HÁ conteúdo para julgar.
+LabelLLM = Literal["AI-native", "AI-enabled", "Non-AI"]
+# Rótulos possíveis na SAÍDA do nó: + "Indeterminado" para quando não houve
+# conteúdo coletado (metadata) ou a classificação falhou. Honestidade > falso
+# Non-AI: "não conseguimos ler o site" não é a mesma coisa que "não usa IA".
+Label = Literal["AI-native", "AI-enabled", "Non-AI", "Indeterminado"]
 Confidence = Literal["high", "medium", "low"]
 
 SYSTEM_PROMPT = """Você é o Classifier do NVISION. Dado o retrato estruturado \
@@ -60,7 +65,7 @@ fraca ou ambígua).
 class _ClassificationResult(BaseModel):
     """O que o LLM decide. `name`/dados ficam fora: pertencem ao nó."""
 
-    label: Label
+    label: LabelLLM
     rationale: str
     confidence: Confidence
 
@@ -76,10 +81,11 @@ class ClassifiedStartup(BaseModel):
 
 
 def _provisorio(startup: StructuredStartup, rationale: str) -> ClassifiedStartup:
-    """Classificação conservadora SEM LLM: Non-AI/low. Usada quando não há
-    conteúdo (metadata) ou quando a chamada falhou — nunca afirma IA sem texto."""
+    """Classificação SEM LLM quando não dá para julgar: "Indeterminado"/low.
+    Usada quando não há conteúdo (metadata) ou a chamada falhou. Não afirma IA
+    sem texto, mas TAMBÉM não afirma Non-AI: só não foi possível determinar."""
     return ClassifiedStartup(
-        startup=startup, label="Non-AI", rationale=rationale, confidence="low"
+        startup=startup, label="Indeterminado", rationale=rationale, confidence="low"
     )
 
 
@@ -99,7 +105,9 @@ def classifier_node(state: RadarState) -> dict:
     extracted = state.get("extracted_startups", [])
 
     classificadas: list[ClassifiedStartup] = []
-    contagem: dict[str, int] = {"AI-native": 0, "AI-enabled": 0, "Non-AI": 0}
+    contagem: dict[str, int] = {
+        "AI-native": 0, "AI-enabled": 0, "Non-AI": 0, "Indeterminado": 0,
+    }
     # Instanciado preguiçosamente: startups só-metadata nem tocam o LLM.
     structured_llm = None
 
@@ -139,7 +147,8 @@ def classifier_node(state: RadarState) -> dict:
                 f"[classifier] {len(classificadas)} classificadas "
                 f"({contagem['AI-native']} AI-native, "
                 f"{contagem['AI-enabled']} AI-enabled, "
-                f"{contagem['Non-AI']} Non-AI)",
+                f"{contagem['Non-AI']} Non-AI, "
+                f"{contagem['Indeterminado']} indeterminado)",
             )
         ],
     }
