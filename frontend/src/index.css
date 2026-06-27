@@ -363,6 +363,31 @@ button,
 .tech-name:hover {
   color: var(--green);
 }
+.tech-summary {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 3px;
+}
+.tech-growth {
+  font-size: 13px;
+  color: var(--green);
+  line-height: 1.5;
+  margin-bottom: 5px;
+}
+.tech-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+.chip {
+  font-size: 11px;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
 .snippet {
   font-size: 12px;
   color: var(--text-dim);
@@ -514,6 +539,48 @@ button,
 }
 .qual-table tbody tr:hover {
   background: rgba(255, 255, 255, 0.02);
+}
+/* Linha clicável que expande o dropdown */
+.qual-row {
+  cursor: pointer;
+}
+.qual-row.open {
+  background: rgba(118, 185, 0, 0.05); /* leve verde NVIDIA quando aberta */
+}
+.caret {
+  display: inline-block;
+  width: 12px;
+  color: var(--green);
+  font-size: 11px;
+}
+/* A célula que abriga o painel não deve ter o padding/hover das células normais */
+.qual-detail-row td {
+  padding: 0;
+  background: var(--bg-1);
+}
+.qual-detail {
+  padding: 16px 20px 20px 32px;
+}
+.qual-detail .section-lbl {
+  margin-top: 14px;
+}
+.qual-detail .section-lbl:first-child {
+  margin-top: 0;
+}
+/* Briefing markdown: mantém a formatação do markdown sem lib externa */
+.briefing-md {
+  white-space: pre-wrap;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 4px;
+  max-height: 360px;
+  overflow: auto;
 }
 
 /* --- Página Analytics --- */

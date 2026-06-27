@@ -199,10 +199,21 @@ export default function Pipeline() {
                     {t.tech}
                   </a>
                   <span className={`badge ${confClass(t.confidence)}`}>
-                    {t.confidence} · {t.relevance_score.toFixed(3)}
+                    fit {t.fit}/100 · {t.confidence}
                   </span>
                 </div>
-                <div className="snippet">{t.snippet}</div>
+                <div className="tech-summary">{t.summary}</div>
+                <div className="tech-growth">↗ {t.growth}</div>
+                {t.matched_signals.length > 0 && (
+                  <div className="tech-signals">
+                    {t.matched_signals.map((s) => (
+                      <span className="chip" key={s}>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {t.snippet && <div className="snippet">{t.snippet}</div>}
               </div>
             ))}
 

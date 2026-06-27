@@ -1,9 +1,17 @@
-import { useEffect, useState } from "react";
-import { labelClass, listStartups, StartupRow } from "../api";
+import { Fragment, useEffect, useState } from "react";
+import {
+  confClass,
+  getStartup,
+  labelClass,
+  listStartups,
+  StartupDetail,
+  StartupRow,
+} from "../api";
 
 // Página Qualificadas (ux.md §6.5): o FUNIL acumulado. Diferente da Pipeline
 // (que roda os agentes), aqui só LEMOS as startups já qualificadas e salvas no
-// banco — é o que prova que os resultados estão sendo persistidos e reusados.
+// banco. Cada linha EXPANDE num dropdown com: sobre a empresa, os produtos
+// NVIDIA compatíveis (com fit) e o briefing executivo — carregado sob demanda.
 
 function tierFromScore(score: number | null): string {
   if (score === null) return "badge-dim";
@@ -12,10 +20,79 @@ function tierFromScore(score: number | null): string {
   return "badge-red";
 }
 
+// Painel do dropdown: sobre + produtos compatíveis + briefing.
+function DetailPanel({
+  detail,
+  loading,
+  error,
+}: {
+  detail: StartupDetail | undefined;
+  loading: boolean;
+  error: string | undefined;
+}) {
+  if (loading) return <div className="qual-detail muted">Carregando detalhe…</div>;
+  if (error) return <div className="qual-detail alert">Erro: {error}</div>;
+  if (!detail) return null;
+
+  const techs = detail.recommendations?.technologies ?? [];
+  return (
+    <div className="qual-detail">
+      <div className="section-lbl">Sobre a empresa</div>
+      <p className="desc">{detail.description ?? "Sem descrição registrada."}</p>
+
+      <div className="section-lbl">Produtos NVIDIA compatíveis</div>
+      {techs.length === 0 && (
+        <div className="muted">Nenhum produto com fit suficiente para este perfil.</div>
+      )}
+      {techs.map((t) => (
+        <div className="tech" key={t.tech}>
+          <div className="tech-head">
+            <a href={t.url} target="_blank" rel="noreferrer" className="tech-name">
+              {t.tech}
+            </a>
+            <span className={`badge ${confClass(t.confidence)}`}>
+              fit {t.fit}/100 · {t.confidence}
+            </span>
+          </div>
+          <div className="tech-summary">{t.summary}</div>
+          <div className="tech-growth">↗ {t.growth}</div>
+          {t.matched_signals.length > 0 && (
+            <div className="tech-signals">
+              {t.matched_signals.map((s) => (
+                <span className="chip" key={s}>
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+      {detail.recommendations?.notes?.map((n) => (
+        <div className="note" key={n}>
+          ⚠ {n}
+        </div>
+      ))}
+
+      <div className="section-lbl">Briefing de recomendação NVIDIA</div>
+      {detail.briefing ? (
+        <pre className="briefing-md">{detail.briefing}</pre>
+      ) : (
+        <div className="muted">Briefing não disponível para esta startup.</div>
+      )}
+    </div>
+  );
+}
+
 export default function Qualificadas() {
   const [rows, setRows] = useState<StartupRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Estado do dropdown: qual linha está aberta + cache/loading/erro por nome.
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [details, setDetails] = useState<Record<string, StartupDetail>>({});
+  const [detailLoading, setDetailLoading] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<Record<string, string>>({});
 
   async function load() {
     setLoading(true);
@@ -33,12 +110,36 @@ export default function Qualificadas() {
     load();
   }, []);
 
+  async function toggle(name: string) {
+    // Fecha se já estava aberta.
+    if (expanded === name) {
+      setExpanded(null);
+      return;
+    }
+    setExpanded(name);
+    // Busca o detalhe só na primeira vez (cache simples por nome).
+    if (details[name] || detailLoading === name) return;
+    setDetailLoading(name);
+    setDetailError((e) => ({ ...e, [name]: "" }));
+    try {
+      const d = await getStartup(name);
+      setDetails((m) => ({ ...m, [name]: d }));
+    } catch (e) {
+      setDetailError((er) => ({
+        ...er,
+        [name]: e instanceof Error ? e.message : "falha ao carregar detalhe",
+      }));
+    } finally {
+      setDetailLoading(null);
+    }
+  }
+
   return (
     <div className="page">
       <div className="qual-head">
         <p className="hint">
           Startups já qualificadas e persistidas (acumuladas entre execuções do
-          pipeline), ordenadas por Fit Score.
+          pipeline), ordenadas por Fit Score. Clique numa linha para ver o detalhe.
         </p>
         <button className="btn-primary" onClick={load} disabled={loading}>
           {loading ? "Atualizando…" : "Atualizar"}
@@ -66,23 +167,44 @@ export default function Qualificadas() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((s) => (
-              <tr key={s.name}>
-                <td className="strong">{s.name}</td>
-                <td>{s.sector ?? "—"}</td>
-                <td>{s.stage ?? "—"}</td>
-                <td>
-                  <span className={`badge ${labelClass(s.classification)}`}>
-                    {s.classification}
-                  </span>
-                </td>
-                <td className="num">
-                  <span className={`badge ${tierFromScore(s.fit_score)}`}>
-                    {s.fit_score ?? "—"}
-                  </span>
-                </td>
-              </tr>
-            ))}
+            {rows.map((s) => {
+              const aberta = expanded === s.name;
+              return (
+                <Fragment key={s.name}>
+                  <tr
+                    className={`qual-row ${aberta ? "open" : ""}`}
+                    onClick={() => toggle(s.name)}
+                  >
+                    <td className="strong">
+                      <span className="caret">{aberta ? "▾" : "▸"}</span> {s.name}
+                    </td>
+                    <td>{s.sector ?? "—"}</td>
+                    <td>{s.stage ?? "—"}</td>
+                    <td>
+                      <span className={`badge ${labelClass(s.classification)}`}>
+                        {s.classification}
+                      </span>
+                    </td>
+                    <td className="num">
+                      <span className={`badge ${tierFromScore(s.fit_score)}`}>
+                        {s.fit_score ?? "—"}
+                      </span>
+                    </td>
+                  </tr>
+                  {aberta && (
+                    <tr className="qual-detail-row">
+                      <td colSpan={5}>
+                        <DetailPanel
+                          detail={details[s.name]}
+                          loading={detailLoading === s.name}
+                          error={detailError[s.name] || undefined}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       )}

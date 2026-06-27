@@ -4,8 +4,12 @@
 export interface TechRec {
   tech: string;
   url: string;
-  relevance_score: number;
+  summary: string;
+  fit: number; // 0..100 — fit produto×empresa (catálogo de regras)
   confidence: string;
+  matched_signals: string[];
+  relevance_score: number; // melhor rerank do RAG (apoio/citação)
+  growth: string; // como o produto ajuda ESTA empresa a crescer
   snippet: string;
 }
 export interface Recommendation {
@@ -61,6 +65,19 @@ export async function listStartups(): Promise<StartupRow[]> {
   const resp = await fetch("/api/startups");
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   return (await resp.json()).startups;
+}
+
+// Detalhe de uma startup persistida (dropdown da página Qualificadas).
+export interface StartupDetail extends StartupRow {
+  description: string | null;
+  recommendations: Recommendation | null; // produtos NVIDIA + fit/growth
+  briefing: string | null; // briefing executivo em markdown
+}
+
+export async function getStartup(name: string): Promise<StartupDetail> {
+  const resp = await fetch(`/api/startups/${encodeURIComponent(name)}`);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return resp.json();
 }
 
 // Agregados do ecossistema (página Analytics).
