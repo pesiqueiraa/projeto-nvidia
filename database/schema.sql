@@ -37,17 +37,6 @@ CREATE TABLE IF NOT EXISTS pipeline_stages (
     advanced_by TEXT
 );
 
--- Sinais de evolução (página Radar de Sinais)
-CREATE TABLE IF NOT EXISTS evolution_signals (
-    id          SERIAL PRIMARY KEY,
-    startup_id  INTEGER NOT NULL REFERENCES startups(id) ON DELETE CASCADE,
-    signal_type TEXT NOT NULL,           -- vaga_ml, repositorio, publicacao...
-    title       TEXT NOT NULL,
-    description TEXT,
-    detected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    source_url  TEXT
-);
-
 -- Execuções de pipeline (uma por disparo do gestor)
 CREATE TABLE IF NOT EXISTS pipeline_runs (
     id           SERIAL PRIMARY KEY,
@@ -70,5 +59,4 @@ CREATE TABLE IF NOT EXISTS pipeline_logs (
 
 -- Índices para as consultas mais comuns
 CREATE INDEX IF NOT EXISTS idx_stages_startup  ON pipeline_stages(startup_id);
-CREATE INDEX IF NOT EXISTS idx_signals_startup ON evolution_signals(startup_id);
 CREATE INDEX IF NOT EXISTS idx_logs_run        ON pipeline_logs(run_id);

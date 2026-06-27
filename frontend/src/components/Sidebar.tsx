@@ -21,12 +21,16 @@ export default function Sidebar() {
         </NavLink>
       ))}
 
-      <div className="sec-lbl">Inteligência</div>
-      {inteligencia.map((n) => (
-        <NavLink key={n.path} to={n.path} className="nav-item">
-          {n.label}
-        </NavLink>
-      ))}
+      {inteligencia.length > 0 && (
+        <>
+          <div className="sec-lbl">Inteligência</div>
+          {inteligencia.map((n) => (
+            <NavLink key={n.path} to={n.path} className="nav-item">
+              {n.label}
+            </NavLink>
+          ))}
+        </>
+      )}
 
       <div className="status-live">
         <span className="dot" />

@@ -27,11 +27,4 @@ export const NAV: NavEntry[] = [
     subtitle: "Visão agregada do ecossistema de IA",
     group: "operacional",
   },
-  // Módulos de inteligência
-  {
-    path: "/sinais",
-    label: "Sinais de Evolução",
-    subtitle: "Detecte a janela ideal de abordagem",
-    group: "inteligencia",
-  },
 ];
