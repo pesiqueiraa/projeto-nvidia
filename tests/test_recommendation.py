@@ -1,104 +1,122 @@
-"""Testes do Recommendation Agent — offline e determinísticos (puro regras)."""
+"""Testes do Recommendation Agent — catálogo (regras) + LLM (narrativa).
+
+As regras são offline/determinísticas (passamos `usar_llm=False`); a parte de
+LLM é testada com um modelo falso (sem rede), no padrão do resto do projeto.
+"""
 from agents.recommendation import (
-    SCORE_HIGH,
-    SCORE_MEDIUM,
+    _GrowthItem,
+    _GrowthOutput,
     _recomendar,
-    _tier,
     recommendation_node,
 )
 
 
-def _chunk(tech, rerank_score, text="trecho sobre a tecnologia", url=None):
-    return {
-        "tech": tech, "url": url or f"https://x/{tech}", "text": text,
-        "chunk_index": 0, "vector_score": 0.3, "rerank_score": rerank_score,
-    }
+# --- LLM falso (mesma costura dos outros testes) --------------------------
+
+class _FakeStructured:
+    def __init__(self, out):
+        self._out = out
+
+    def invoke(self, _prompt):
+        return self._out
 
 
-# --- regras puras ---------------------------------------------------------
+class _FakeLLM:
+    def __init__(self, out):
+        self._out = out
 
-def test_tier_segue_as_faixas():
-    assert _tier(SCORE_HIGH) == "high"
-    assert _tier(SCORE_MEDIUM) == "medium"
-    assert _tier(SCORE_MEDIUM - 0.01) == "low"
+    def with_structured_output(self, _schema):
+        return _FakeStructured(self._out)
 
 
-def test_recomendar_ordena_por_relevancia_e_corta_top_k():
-    chunks = [
-        _chunk("A", 0.10), _chunk("B", 0.80), _chunk("C", 0.50), _chunk("D", 0.30),
-    ]
-    rec = _recomendar("Acme", "AI-native", chunks)
+def _startup(name, **kw):
+    base = {"name": name, "description": None, "sector": None,
+            "ai_signals": [], "tech_stack": []}
+    base.update(kw)
+    return base
+
+
+# --- regras puras (sem LLM) -----------------------------------------------
+
+def test_recomendar_usa_catalogo_e_template_sem_llm():
+    s = _startup("DataPay", sector="fintech",
+                 description="plataforma de análise de dados financeiros com etl e pandas")
+    rec = _recomendar("DataPay", "Non-AI", s, [], usar_llm=False)
     techs = [t.tech for t in rec.technologies]
-    assert techs == ["B", "C", "D"]          # top 3 por score, em ordem
-    assert rec.overall_confidence == "high"  # melhor tech (B=0.80) é high
-
-
-def test_recomendar_agrupa_por_tech_pelo_melhor_score():
-    # mesma tech em dois chunks -> fica o maior rerank_score
-    chunks = [_chunk("NIM", 0.20), _chunk("NIM", 0.70)]
-    rec = _recomendar("Acme", "AI-native", chunks)
-    assert len(rec.technologies) == 1
-    assert rec.technologies[0].relevance_score == 0.70
-    assert rec.technologies[0].confidence == "high"
-
-
-def test_recomendar_non_ai_rebaixa_confianca_e_sinaliza():
-    chunks = [_chunk("NIM", 0.90)]  # score alto, mas a startup é Non-AI
-    rec = _recomendar("Padaria", "Non-AI", chunks)
-    assert rec.overall_confidence == "low"           # rebaixado apesar do 0.90
+    assert "NVIDIA RAPIDS" in techs          # produto de dado p/ empresa data-heavy
+    rapids = next(t for t in rec.technologies if t.tech == "NVIDIA RAPIDS")
+    assert rapids.fit > 0
+    assert rapids.growth                      # template do catálogo preenche
     assert any("Non-AI" in n for n in rec.notes)
-    assert rec.technologies[0].confidence == "high"  # a tech em si segue alta
 
 
-def test_recomendar_sem_chunks_retorna_vazio_com_nota():
-    rec = _recomendar("Acme", "AI-native", [])
+def test_recomendar_sem_fit_retorna_vazio():
+    s = _startup("Padaria", description="pães artesanais de bairro")
+    rec = _recomendar("Padaria", "Non-AI", s, [], usar_llm=False)
     assert rec.technologies == []
-    assert rec.overall_confidence == "low"
-    assert rec.notes and "sem contexto" in rec.notes[0]
+    assert rec.notes and "nenhum produto" in rec.notes[0]
 
 
-def test_recomendacao_carrega_citacao():
-    rec = _recomendar("Acme", "AI-enabled", [_chunk("Triton", 0.60, url="https://nv/triton")])
-    assert rec.technologies[0].url == "https://nv/triton"
+def test_recomendar_ordena_por_fit_desc():
+    s = _startup("Voz", sector="Software/SaaS",
+                 description="assistente de voz com llm para call center e transcrição")
+    rec = _recomendar("Voz", "AI-native", s, [], usar_llm=False)
+    fits = [t.fit for t in rec.technologies]
+    assert fits == sorted(fits, reverse=True)
+    assert rec.overall_confidence == rec.technologies[0].confidence
+
+
+# --- híbrido com LLM ------------------------------------------------------
+
+def test_recomendar_llm_escreve_growth(monkeypatch):
+    out = _GrowthOutput(items=[
+        _GrowthItem(tech="NVIDIA RAPIDS", growth="acelera seus ETLs financeiros em GPU")
+    ])
+    monkeypatch.setattr("agents.recommendation.get_llm", lambda: _FakeLLM(out))
+    s = _startup("DataPay", sector="fintech", description="dados etl pandas")
+    rec = _recomendar("DataPay", "Non-AI", s, [], usar_llm=True)
+    rapids = next(t for t in rec.technologies if t.tech == "NVIDIA RAPIDS")
+    assert rapids.growth == "acelera seus ETLs financeiros em GPU"  # LLM sobrescreve
+
+
+def test_recomendar_llm_falha_cai_no_template(monkeypatch):
+    class _Boom:
+        def with_structured_output(self, _):
+            raise RuntimeError("LLM fora do ar")
+    monkeypatch.setattr("agents.recommendation.get_llm", lambda: _Boom())
+    s = _startup("DataPay", sector="fintech", description="dados etl pandas")
+    rec = _recomendar("DataPay", "Non-AI", s, [], usar_llm=True)
+    rapids = next(t for t in rec.technologies if t.tech == "NVIDIA RAPIDS")
+    assert rapids.growth  # template do catálogo, sem quebrar
 
 
 # --- nó do grafo ----------------------------------------------------------
 
-def _validated(name, label):
+def _validated(name, label, startup=None):
     return {
         "classified": {
-            "startup": {"name": name, "extraction_basis": "content"},
+            "startup": startup or _startup(name),
             "label": label, "rationale": "x", "confidence": "high",
         },
         "validation_confidence": "high", "issues": [],
     }
 
 
-def test_node_junta_label_do_validated_com_contexto_do_rag():
+def test_node_monta_recomendacoes(monkeypatch):
+    monkeypatch.setattr("agents.recommendation.get_llm",
+                        lambda: _FakeLLM(_GrowthOutput(items=[])))
+    s = _startup("DataPay", sector="fintech", description="dados etl pandas")
     state = {
-        "validated_startups": [_validated("Aegro", "AI-native")],
-        "rag_contexts": [{"name": "Aegro", "query": "...", "chunks": [_chunk("NeMo", 0.6)]}],
+        "validated_startups": [_validated("DataPay", "Non-AI", s)],
+        "rag_contexts": [{"name": "DataPay", "chunks": []}],
     }
     out = recommendation_node(state)
     rec = out["recommendations"][0]
-    assert rec["name"] == "Aegro"
-    assert rec["label"] == "AI-native"           # veio do validated_startups
-    assert rec["technologies"][0]["tech"] == "NeMo"
+    assert rec["name"] == "DataPay"
+    assert any(t["tech"] == "NVIDIA RAPIDS" for t in rec["technologies"])
     assert "1/1" in out["messages"][0][1]
 
 
-def test_node_label_desconhecido_assume_non_ai():
-    # contexto RAG sem startup correspondente no validated -> Non-AI conservador
-    state = {
-        "validated_startups": [],
-        "rag_contexts": [{"name": "Fantasma", "query": "...", "chunks": [_chunk("NIM", 0.9)]}],
-    }
-    out = recommendation_node(state)
-    rec = out["recommendations"][0]
-    assert rec["label"] == "Non-AI"
-    assert rec["overall_confidence"] == "low"
-
-
-def test_node_sem_contextos_nao_quebra():
+def test_node_sem_validadas_nao_quebra():
     out = recommendation_node({"validated_startups": [], "rag_contexts": []})
     assert out["recommendations"] == []

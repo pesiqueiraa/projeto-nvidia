@@ -24,7 +24,10 @@ def _rec(name, label="AI-native", techs=None, overall="medium", notes=None):
         "name": name, "label": label,
         "technologies": techs if techs is not None else [{
             "tech": "NeMo Guardrails", "url": "https://nv/guardrails",
-            "relevance_score": 0.402, "confidence": "medium",
+            "summary": "segurança e conformidade para apps com LLM",
+            "fit": 72, "confidence": "medium",
+            "matched_signals": ["jurídic", "compliance"],
+            "relevance_score": 0.402, "growth": "reduz risco regulatório ao operar LLMs",
             "snippet": "rails de segurança para LLMs",
         }],
         "overall_confidence": overall, "notes": notes or [],

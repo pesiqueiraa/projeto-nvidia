@@ -55,5 +55,34 @@ def test_rows_from_state_sem_fit_correspondente_fica_none():
     assert rows[0]["confidence"] == 0.6  # medium -> 0.6
 
 
+def test_rows_from_state_inclui_detalhe_para_o_dropdown():
+    state = {
+        "classified_startups": [
+            {"startup": {"name": "ChatJurix", "sector": "legaltech",
+                         "description": "assistente jurídico com LLM"},
+             "label": "AI-native", "rationale": "x", "confidence": "high"},
+        ],
+        "fit_scores": [{"name": "ChatJurix", "score": 88}],
+        "recommendations": [
+            {"name": "ChatJurix", "label": "AI-native",
+             "technologies": [{"tech": "NVIDIA NIM", "fit": 60}],
+             "overall_confidence": "high", "notes": []},
+        ],
+        "briefings": [{"name": "ChatJurix", "label": "AI-native",
+                       "markdown": "# Briefing — ChatJurix"}],
+    }
+    row = rows_from_state(state)[0]
+    assert row["description"] == "assistente jurídico com LLM"
+    assert row["recommendations"]["technologies"][0]["tech"] == "NVIDIA NIM"
+    assert row["briefing"].startswith("# Briefing")
+
+
+def test_rows_from_state_sem_detalhe_fica_none():
+    # Sem recommendations/briefings no estado, os campos do dropdown ficam nulos.
+    row = rows_from_state(_state())[0]
+    assert row["recommendations"] is None
+    assert row["briefing"] is None
+
+
 def test_rows_from_state_vazio():
     assert rows_from_state({}) == []
