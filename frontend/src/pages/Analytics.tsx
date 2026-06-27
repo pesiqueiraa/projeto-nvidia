@@ -62,6 +62,14 @@ export default function Analytics() {
   const maxClass = Math.max(1, ...(data?.by_classification.map((d) => d.count) ?? [1]));
   const maxSector = Math.max(1, ...(data?.by_sector.map((d) => d.count) ?? [1]));
 
+  // KPIs derivados da distribuição de maturidade (dados que já temos).
+  const porLabel = Object.fromEntries(
+    (data?.by_classification ?? []).map((d) => [d.classification, d.count]),
+  );
+  const aiNative = porLabel["AI-native"] ?? 0;
+  const usamIA = (porLabel["AI-native"] ?? 0) + (porLabel["AI-enabled"] ?? 0);
+  const pctIA = data && data.total ? Math.round((usamIA / data.total) * 100) : 0;
+
   return (
     <div className="page">
       <div className="qual-head">
@@ -85,6 +93,14 @@ export default function Analytics() {
             <div className="kpi">
               <div className="kpi-num">{data.total}</div>
               <div className="kpi-lbl">startups qualificadas</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-num">{aiNative}</div>
+              <div className="kpi-lbl">AI-native</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-num">{pctIA}%</div>
+              <div className="kpi-lbl">usam IA (native + enabled)</div>
             </div>
           </div>
 
