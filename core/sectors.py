@@ -64,7 +64,11 @@ SECTOR_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
                        "cybersec", "ciberseg", "segurança da informação",
                        "data analytics", "machine learning", "inteligência "
                        "artificial", "no-code", "nocode", "low-code", "api ",
-                       "infraestrutura de dados", "crm", "erp")),
+                       "infraestrutura de dados", "crm", "erp",
+                       # catch-all: por vir POR ÚLTIMO, só pega "tech" genérico
+                       # — os verticais (fintech, agtech, edtech...) já casaram
+                       # com seus setores específicos acima.
+                       "tech")),
 ]
 
 # Ordem de exibição/declaração da taxonomia (útil se o Extractor for travado).
