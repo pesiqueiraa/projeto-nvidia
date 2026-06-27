@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
 import {
-  confClass,
   getStartup,
   labelClass,
   listStartups,
@@ -11,7 +10,7 @@ import {
 // Página Qualificadas (ux.md §6.5): o FUNIL acumulado. Diferente da Pipeline
 // (que roda os agentes), aqui só LEMOS as startups já qualificadas e salvas no
 // banco. Cada linha EXPANDE num dropdown com: sobre a empresa, os produtos
-// NVIDIA compatíveis e o briefing executivo — carregado sob demanda.
+// NVIDIA recomendados e o briefing executivo — carregado sob demanda.
 
 // Renderiza **negrito** dentro de um parágrafo (sem lib de markdown).
 function renderInline(texto: string) {
@@ -40,7 +39,7 @@ function BriefingText({ text }: { text: string }) {
   );
 }
 
-// Painel do dropdown: sobre + produtos compatíveis + briefing.
+// Painel do dropdown: sobre + produtos recomendados + briefing.
 function DetailPanel({
   detail,
   loading,
@@ -60,7 +59,7 @@ function DetailPanel({
       <div className="section-lbl">Sobre a empresa</div>
       <p className="desc">{detail.description ?? "Sem descrição registrada."}</p>
 
-      <div className="section-lbl">Produtos NVIDIA compatíveis</div>
+      <div className="section-lbl">Produtos NVIDIA recomendados</div>
       {techs.length === 0 && (
         <div className="muted">Nenhum produto NVIDIA aderente a este perfil.</div>
       )}
@@ -70,9 +69,6 @@ function DetailPanel({
             <a href={t.url} target="_blank" rel="noreferrer" className="tech-name">
               {t.tech}
             </a>
-            <span className={`badge ${confClass(t.confidence)}`}>
-              {t.confidence}
-            </span>
           </div>
           <div className="tech-summary">{t.summary}</div>
           <div className="tech-growth">↗ {t.growth}</div>

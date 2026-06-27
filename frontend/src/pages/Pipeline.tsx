@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { confClass, labelClass, PipelineResult, StageInfo, streamPipeline } from "../api";
+import { labelClass, PipelineResult, StageInfo, streamPipeline } from "../api";
 
 // Página Pipeline (ux.md §6.5): o gestor digita uma consulta, dispara o
 // pipeline multi-agente no backend (POST /api/pipeline/stream) e acompanha, em
-// tempo real, o stepper de estágios — depois vê as startups qualificadas com a
-// stack NVIDIA recomendada e a confiança.
+// tempo real, o stepper de estágios — depois vê as startups qualificadas com os
+// produtos NVIDIA recomendados e a aderência.
 
 type StageStatus = "pending" | "running" | "done";
 interface StepState extends StageInfo {
@@ -168,12 +168,7 @@ export default function Pipeline() {
             {c?.startup.description && <p className="desc">{c.startup.description}</p>}
             {c?.rationale && <p className="rationale">{c.rationale}</p>}
 
-            <div className="section-lbl">
-              Stack NVIDIA recomendada
-              <span className={`badge ${confClass(rec.overall_confidence)}`}>
-                confiança {rec.overall_confidence}
-              </span>
-            </div>
+            <div className="section-lbl">Produtos NVIDIA recomendados</div>
 
             {rec.technologies.length === 0 && (
               <div className="muted">Nenhuma tecnologia aderente ao perfil.</div>
@@ -184,9 +179,6 @@ export default function Pipeline() {
                   <a href={t.url} target="_blank" rel="noreferrer" className="tech-name">
                     {t.tech}
                   </a>
-                  <span className={`badge ${confClass(t.confidence)}`}>
-                    {t.confidence}
-                  </span>
                 </div>
                 <div className="tech-summary">{t.summary}</div>
                 <div className="tech-growth">↗ {t.growth}</div>

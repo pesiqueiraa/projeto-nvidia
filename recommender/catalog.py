@@ -9,8 +9,10 @@ Por que este módulo existe (a virada de chave do Entregável 4):
 
   Aqui invertemos: cada produto carrega SINAIS DE NECESSIDADE explícitos (o que
   na empresa indica que ela se beneficiaria) e uma ADEQUAÇÃO POR MATURIDADE. O
-  fit produto×empresa vira uma regra transparente e auditável; o sinal semântico
-  do RAG entra como UM insumo de apoio, não como o juiz.
+  match produto×empresa vira uma regra transparente e auditável — 100% por
+  regras (sinais + setor + maturidade). O RAG NÃO pontua: a base NVIDIA é rasa e
+  a semântica quase não movia o score, então ela ficou só como fonte de CITAÇÃO
+  no briefing/recomendação (ver agents/recommendation.py).
 
 Decisão "abrir o fit" (escolha do gestor): a maturidade NÃO zera mais Non-AI de
 forma cega. Cada produto declara para quais maturidades ele serve — produtos de
@@ -29,12 +31,13 @@ from core.sectors import canonical_sector
 
 Confidence = Literal["high", "medium", "low"]
 
-# --- Pesos do fit por regra (a "constituição" do match, explícita) ---
-W_SIGNAL = 0.60   # sinais de necessidade no perfil (o sinal mais forte)
-W_SECTOR = 0.20   # o setor da empresa bater com o setor-alvo do produto
-W_SEM = 0.20      # relevância semântica do RAG (rerank do Cohere) como apoio
+# --- Pesos do match por regra (a "constituição" do match, explícita) ---
+# 100% por REGRAS: sinais de necessidade + setor. O RAG NÃO pontua mais (a base
+# NVIDIA é rasa e a semântica quase não movia o score) — ele entra só como fonte
+# de CITAÇÃO no briefing/recomendação (ver agents/recommendation.py).
+W_SIGNAL = 0.75   # sinais de necessidade no perfil (o sinal mais forte)
+W_SECTOR = 0.25   # o setor da empresa bater com o setor-alvo do produto
 SIGNAL_FULL = 2   # nº de gatilhos para o eixo de sinais saturar em 1.0
-SEM_CAP = 0.50    # rerank a partir do qual o eixo semântico vale 1.0
 
 TOP_K = 3         # quantos produtos recomendar por empresa
 MIN_FIT = 25      # abaixo disto, não recomenda (evita ruído)
@@ -59,15 +62,17 @@ class NvidiaProduct(BaseModel):
 
 
 class ProductFit(BaseModel):
-    """Resultado do match de UM produto com UMA empresa (auditável)."""
+    """Resultado do match de UM produto com UMA empresa (auditável).
+
+    `fit` é o score INTERNO de ranking (0..100) — só ordena/seleciona os
+    produtos; não é exposto na UI/briefing."""
 
     tech: str
     url: str
     summary: str
-    fit: int                        # 0..100
+    fit: int                        # 0..100 — score interno de ranking
     confidence: Confidence
     matched_signals: list[str]      # quais gatilhos casaram (transparência)
-    semantic_score: float           # melhor rerank do RAG p/ esta tech (0 se ausente)
     growth_thesis: str              # tese template; o LLM pode sobrescrever depois
 
 
@@ -214,14 +219,13 @@ def _confidence(fit: int) -> Confidence:
 
 
 def _score_one(produto: NvidiaProduct, profile_text: str, sector_canon: str,
-               label: str, semantic: float) -> ProductFit:
-    """Aplica a regra de fit de UM produto a UMA empresa (tudo auditável)."""
+               label: str) -> ProductFit:
+    """Aplica a regra de match de UM produto a UMA empresa (tudo auditável)."""
     matched = [t for t in produto.triggers if t in profile_text]
     signal = min(len(matched) / SIGNAL_FULL, 1.0)
     sector = 1.0 if sector_canon in produto.sectors else 0.0
-    sem = min(semantic / SEM_CAP, 1.0) if semantic > 0 else 0.0
 
-    need = W_SIGNAL * signal + W_SECTOR * sector + W_SEM * sem
+    need = W_SIGNAL * signal + W_SECTOR * sector
     mult = produto.maturity_fit.get(label, 0.5)
     fit = round(need * mult * 100)
 
@@ -232,7 +236,6 @@ def _score_one(produto: NvidiaProduct, profile_text: str, sector_canon: str,
         fit=fit,
         confidence=_confidence(fit),
         matched_signals=matched,
-        semantic_score=round(semantic, 3),
         growth_thesis=produto.growth_thesis,
     )
 
@@ -241,25 +244,22 @@ def score_products(
     profile_text: str,
     sector: str | None,
     label: str,
-    semantic_by_tech: dict[str, float] | None = None,
     top_k: int = TOP_K,
     min_fit: int = MIN_FIT,
 ) -> list[ProductFit]:
-    """Pontua TODO o catálogo contra uma empresa e devolve os melhores fits.
+    """Pontua TODO o catálogo contra uma empresa e devolve os melhores matches.
 
     profile_text: texto livre do perfil (description + sinais de IA + stack...).
     sector: setor cru da empresa (mapeado para o canônico internamente).
-    label: maturidade (AI-native / AI-enabled / Non-AI) — modula o fit por produto.
-    semantic_by_tech: melhor rerank do RAG por tech (sinal de apoio), opcional.
+    label: maturidade (AI-native / AI-enabled / Non-AI) — modula o score por produto.
 
-    Retorna os `top_k` produtos com fit >= `min_fit`, ordenados por fit desc.
+    Retorna os `top_k` produtos com score >= `min_fit`, ordenados por score desc.
     """
     texto = (profile_text or "").lower()
     sector_canon = canonical_sector(sector)
-    sem_map = semantic_by_tech or {}
 
     fits = [
-        _score_one(p, texto, sector_canon, label, sem_map.get(p.tech, 0.0))
+        _score_one(p, texto, sector_canon, label)
         for p in CATALOG
     ]
     fits = [f for f in fits if f.fit >= min_fit]

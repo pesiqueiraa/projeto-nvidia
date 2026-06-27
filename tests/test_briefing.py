@@ -27,7 +27,7 @@ def _rec(name, label="AI-native", techs=None, overall="medium", notes=None):
             "summary": "segurança e conformidade para apps com LLM",
             "confidence": "medium",
             "matched_signals": ["jurídic", "compliance"],
-            "relevance_score": 0.402, "growth": "reduz risco regulatório ao operar LLMs",
+            "growth": "reduz risco regulatório ao operar LLMs",
             "snippet": "rails de segurança para LLMs",
         }],
         "overall_confidence": overall, "notes": notes or [],
@@ -51,7 +51,7 @@ def test_briefing_traz_empresa_diagnostico_e_recomendacao():
 def test_briefing_cita_no_maximo_dois_produtos():
     techs = [
         {"tech": f"Prod{i}", "url": "u", "summary": "s",
-         "confidence": "high", "matched_signals": [], "relevance_score": 0.0,
+         "confidence": "high", "matched_signals": [],
          "growth": f"ajuda {i}", "snippet": ""}
         for i in range(4)
     ]

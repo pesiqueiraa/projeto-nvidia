@@ -5,9 +5,8 @@ export interface TechRec {
   tech: string;
   url: string;
   summary: string;
-  confidence: string;
+  confidence: string; // força do match por regras (alta/média/baixa)
   matched_signals: string[];
-  relevance_score: number; // melhor rerank do RAG (apoio/citação)
   growth: string; // como o produto ajuda ESTA empresa a crescer
   snippet: string;
 }
@@ -146,9 +145,4 @@ export function labelClass(label: string): string {
   if (label === "AI-native") return "badge-green";
   if (label === "AI-enabled") return "badge-amber";
   return "badge-dim";
-}
-export function confClass(conf: string): string {
-  if (conf === "high") return "badge-green";
-  if (conf === "medium") return "badge-amber";
-  return "badge-red";
 }

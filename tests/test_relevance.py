@@ -35,9 +35,8 @@ def _raw(*nomes):
     return [{"name": n, "source": "x", "source_url": "u"} for n in nomes]
 
 
-def test_prioriza_relevantes_e_completa_ate_o_teto(monkeypatch):
-    # Com folga no teto, as selecionadas vêm primeiro e a lista é completada com
-    # as demais descobertas (na ordem de descoberta) — nunca volta curta.
+def test_mantem_so_as_relevantes_sem_completar(monkeypatch):
+    # Com folga no teto, devolve SÓ as on-topic — não completa com off-topic.
     from core.config import settings
     monkeypatch.setattr(settings, "max_startups", 10)
     _patch(monkeypatch, _Selection(selected_names=["AbacatePay", "Bamboo DCM"],
@@ -47,23 +46,20 @@ def test_prioriza_relevantes_e_completa_ate_o_teto(monkeypatch):
     out = relevance_node(state)
 
     nomes = [r["name"] for r in out["raw_startups"]]
-    assert nomes == ["AbacatePay", "Bamboo DCM", "CleanCloud", "Squid"]
-    assert "4/4" in out["messages"][0][1]
+    assert nomes == ["AbacatePay", "Bamboo DCM"]   # lavanderia e energia ficam de fora
+    assert "2/4" in out["messages"][0][1]
 
 
-def test_completa_respeitando_o_teto(monkeypatch):
-    # Teto menor que o pool: prioriza as selecionadas e completa só até o teto.
+def test_devolve_poucas_quando_poucas_relevantes(monkeypatch):
+    # Poucas relevantes => lista curta (não reenche com ruído).
     from core.config import settings
-    monkeypatch.setattr(settings, "max_startups", 3)
+    monkeypatch.setattr(settings, "max_startups", 10)
     _patch(monkeypatch, _Selection(selected_names=["Bamboo DCM"], reasoning="fintech"))
     state = {"query": "finanças", "search_terms": [],
              "raw_startups": _raw("AbacatePay", "CleanCloud", "Bamboo DCM", "Squid")}
     out = relevance_node(state)
 
-    nomes = [r["name"] for r in out["raw_startups"]]
-    assert nomes[0] == "Bamboo DCM"          # selecionada vem primeiro
-    assert len(nomes) == 3                    # completada até o teto
-    assert "Bamboo DCM" in nomes and len(set(nomes)) == 3  # sem duplicar
+    assert [r["name"] for r in out["raw_startups"]] == ["Bamboo DCM"]
 
 
 def test_casamento_de_nome_e_case_insensitive(monkeypatch):
@@ -93,13 +89,14 @@ def test_fallback_quando_llm_falha(monkeypatch):
     assert "fallback" in out["messages"][0][1]
 
 
-def test_fallback_quando_nada_selecionado(monkeypatch):
+def test_nada_relevante_devolve_vazio(monkeypatch):
+    # O LLM rodou e não achou nada on-topic -> lista vazia (honesto, sem ruído).
     from core.config import settings
     monkeypatch.setattr(settings, "max_startups", 2)
     _patch(monkeypatch, _Selection(selected_names=[], reasoning="nada casou"))
     state = {"query": "q", "search_terms": [], "raw_startups": _raw("A", "B", "C")}
     out = relevance_node(state)
-    assert [r["name"] for r in out["raw_startups"]] == ["A", "B"]
+    assert out["raw_startups"] == []
 
 
 def test_entrada_vazia_passa_direto_sem_llm(monkeypatch):

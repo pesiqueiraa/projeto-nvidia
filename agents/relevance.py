@@ -82,25 +82,24 @@ def relevance_node(state: RadarState) -> dict:
         )
         escolhidos = {n.strip().lower() for n in sel.selected_names}
         filtradas = [r for r in raw_startups if r["name"].strip().lower() in escolhidos]
-    except Exception:  # LLM fora do ar/parse — degrada para o comportamento antigo
-        logger.exception("relevance: filtro falhou; mantendo as primeiras N")
+        erro = False
+    except Exception:  # LLM fora do ar/parse — só aqui há degradação
+        logger.exception("relevance: filtro falhou")
         filtradas = []
+        erro = True
 
-    # Fallback: se o filtro não devolveu nada aproveitável, mantém as primeiras N
-    # (melhor algum resultado do que nenhum).
-    if not filtradas:
+    if erro:
+        # RESILIÊNCIA: o LLM caiu — não dá pra julgar relevância, então mantém as
+        # primeiras N (melhor algum resultado do que zero por uma falha técnica).
         filtradas = raw_startups[: settings.max_startups]
-        nota = "fallback (nada relevante selecionado)"
+        nota = "fallback (LLM falhou)"
     else:
-        # Garante SEMPRE entregar até `max_startups`: as selecionadas por
-        # relevância vêm primeiro; se forem menos que o teto, completamos com as
-        # demais startups descobertas (na ordem de descoberta), sem duplicar. O
-        # fit_score rankeia tudo depois, então as de complemento ficam no fim por
-        # mérito — mas a lista nunca volta curta só porque o filtro foi seletivo.
-        ja_incluidas = {id(r) for r in filtradas}
-        complemento = [r for r in raw_startups if id(r) not in ja_incluidas]
-        filtradas = (filtradas + complemento)[: settings.max_startups]
-        nota = "filtradas por relevância (completadas até o teto)"
+        # Só as RELEVANTES, até o teto. Sem completar a lista com startups
+        # off-topic: se o filtro aprovou poucas (ou nenhuma), é mais honesto
+        # devolver poucas (ou nenhuma) do que reencher com ruído — era esse o
+        # propósito do filtro. Lista vazia aqui = nada on-topic foi descoberto.
+        filtradas = filtradas[: settings.max_startups]
+        nota = "filtradas por relevância"
 
     return {
         "raw_startups": filtradas,

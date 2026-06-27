@@ -35,17 +35,6 @@ def test_sem_sinais_nao_recomenda_nada():
     assert fits == []  # nada casa -> não força recomendação
 
 
-def test_semantica_do_rag_entra_como_apoio():
-    perfil = "assistente com llm"
-    base = {f.tech: f.fit for f in score_products(perfil, None, "AI-native")}
-    boost = {
-        f.tech: f.fit
-        for f in score_products(perfil, None, "AI-native",
-                                semantic_by_tech={"NVIDIA NIM": 0.5})
-    }
-    assert boost["NVIDIA NIM"] > base["NVIDIA NIM"]
-
-
 def test_respeita_top_k_e_min_fit():
     perfil = "assistente llm rag dados etl pandas voz fala robô saúde fraude"
     fits = score_products(perfil, None, "AI-native", top_k=3)

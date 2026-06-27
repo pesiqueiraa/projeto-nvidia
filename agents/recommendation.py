@@ -42,9 +42,8 @@ class TechRecommendation(BaseModel):
     tech: str
     url: str
     summary: str                 # o que o produto faz
-    confidence: Confidence       # faixa de confiança do match
+    confidence: Confidence       # faixa de confiança do match (por regras)
     matched_signals: list[str]   # gatilhos do perfil que casaram (transparência)
-    relevance_score: float       # melhor rerank do RAG (apoio/citação)
     growth: str                  # COMO ajuda a empresa a crescer (LLM ou template)
     snippet: str = ""            # trecho do RAG para citação (se houver)
 
@@ -83,8 +82,12 @@ def _perfil_texto(startup: dict) -> str:
     return ". ".join(partes)
 
 
-def _semantica_por_tech(chunks: list[dict]) -> tuple[dict[str, float], dict[str, str]]:
-    """Do RAG: melhor rerank por tech (sinal de apoio) + trecho p/ citação."""
+def _snippets_por_tech(chunks: list[dict]) -> dict[str, str]:
+    """Do RAG, SÓ para CITAÇÃO: o melhor trecho (maior rerank) por tecnologia.
+
+    A recomendação em si é 100% por regras (catálogo); o RAG não pontua mais —
+    entra apenas para anexar um trecho-fonte ao produto recomendado, quando a
+    base NVIDIA tiver algo sobre ele."""
     melhor_score: dict[str, float] = {}
     snippet: dict[str, str] = {}
     for c in chunks:
@@ -93,7 +96,7 @@ def _semantica_por_tech(chunks: list[dict]) -> tuple[dict[str, float], dict[str,
         if tech not in melhor_score or score > melhor_score[tech]:
             melhor_score[tech] = score
             snippet[tech] = c.get("text", "")[:200].strip()
-    return melhor_score, snippet
+    return snippet
 
 
 def _escrever_crescimento(startup: dict, fits: list[ProductFit]) -> dict[str, str]:
@@ -121,9 +124,9 @@ def _escrever_crescimento(startup: dict, fits: list[ProductFit]) -> dict[str, st
 def _recomendar(name: str, label: str, startup: dict,
                 chunks: list[dict], usar_llm: bool = True) -> StartupRecommendation:
     """Aplica catálogo (regras) + LLM (narrativa) a UMA startup."""
-    sem_por_tech, snip_por_tech = _semantica_por_tech(chunks)
+    snip_por_tech = _snippets_por_tech(chunks)   # RAG só para citação
     produtos = score_products(
-        _perfil_texto(startup), startup.get("sector"), label, sem_por_tech
+        _perfil_texto(startup), startup.get("sector"), label
     )
 
     if not produtos:
@@ -142,7 +145,6 @@ def _recomendar(name: str, label: str, startup: dict,
             summary=p.summary,
             confidence=p.confidence,
             matched_signals=p.matched_signals,
-            relevance_score=p.semantic_score,
             growth=growth_por_tech.get(p.tech, p.growth_thesis),
             snippet=snip_por_tech.get(p.tech, ""),
         )
