@@ -1,4 +1,4 @@
-"""Testes do Briefing Agent — offline e determinísticos (puro template)."""
+"""Testes do Briefing Agent — briefing CURTO e determinístico (≤2 parágrafos)."""
 from agents.briefing import _render_briefing, briefing_node
 
 
@@ -34,40 +34,51 @@ def _rec(name, label="AI-native", techs=None, overall="medium", notes=None):
     }
 
 
-def test_briefing_inclui_secoes_e_dados():
-    md = _render_briefing(_rec("ChatJurix"), _validated("ChatJurix"))
-    assert "# Briefing executivo — ChatJurix" in md
-    assert "## Classificação de maturidade de IA" in md
-    assert "**AI-native**" in md
-    assert "legaltech" in md
-    assert "## Stack NVIDIA recomendada" in md
-    assert "## Sinal de confiança" in md
+def test_briefing_tem_no_maximo_dois_paragrafos():
+    md = _render_briefing(_rec("ChatJurix"), _validated("ChatJurix"),
+                          fit={"score": 88, "tier": "alto"})
+    paragrafos = [p for p in md.split("\n\n") if p.strip()]
+    assert len(paragrafos) <= 2
 
 
-def test_briefing_traz_citacao_da_tecnologia():
-    md = _render_briefing(_rec("ChatJurix"), _validated("ChatJurix"))
-    assert "NeMo Guardrails" in md
-    assert "https://nv/guardrails" in md           # citação (proveniência)
-    assert "rails de segurança para LLMs" in md    # snippet
+def test_briefing_traz_empresa_diagnostico_e_recomendacao():
+    md = _render_briefing(_rec("ChatJurix"), _validated("ChatJurix"),
+                          fit={"score": 88, "tier": "alto"})
+    assert "ChatJurix" in md
+    assert "AI-native" in md             # diagnóstico
+    assert "88/100" in md                # fit Inception
+    assert "NeMo Guardrails" in md       # produto recomendado
+    assert "risco regulatório" in md     # como ajuda a crescer
+
+
+def test_briefing_cita_no_maximo_dois_produtos():
+    techs = [
+        {"tech": f"Prod{i}", "url": "u", "summary": "s", "fit": 90 - i,
+         "confidence": "high", "matched_signals": [], "relevance_score": 0.0,
+         "growth": f"ajuda {i}", "snippet": ""}
+        for i in range(4)
+    ]
+    md = _render_briefing(_rec("Multi", techs=techs), _validated("Multi"))
+    assert "Prod0" in md and "Prod1" in md       # os 2 primeiros
+    assert "Prod2" not in md and "Prod3" not in md  # cortados (briefing curto)
 
 
 def test_briefing_sem_tecnologias_avisa():
     md = _render_briefing(_rec("Vazia", techs=[]), _validated("Vazia"))
-    assert "Nenhuma tecnologia NVIDIA com fit suficiente" in md
+    assert "Nenhum produto NVIDIA" in md
 
 
 def test_briefing_inclui_notas_da_recomendacao():
     rec = _rec("Padaria", label="Non-AI", overall="low",
-               notes=["Non-AI: recomendação especulativa"])
+               notes=["priorize produtos de dado/infra"])
     md = _render_briefing(rec, _validated("Padaria", label="Non-AI"))
-    assert "Non-AI: recomendação especulativa" in md
+    assert "produtos de dado/infra" in md  # a nota entra no briefing (capitalizada)
 
 
 def test_briefing_sem_validated_nao_quebra():
-    # recomendação sem validated correspondente -> ainda gera o relatório
     md = _render_briefing(_rec("Fantasma"), None)
-    assert "# Briefing executivo — Fantasma" in md
-    assert "indisponível" in md  # sinal de confiança marca a validação ausente
+    assert "Fantasma" in md
+    assert "AI-native" in md  # ainda traz o diagnóstico mínimo
 
 
 def test_briefing_node_gera_um_relatorio_por_recomendacao():

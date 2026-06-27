@@ -20,6 +20,33 @@ function tierFromScore(score: number | null): string {
   return "badge-red";
 }
 
+// Renderiza **negrito** dentro de um parágrafo (sem lib de markdown).
+function renderInline(texto: string) {
+  return texto.split(/(\*\*[^*]+\*\*)/g).map((parte, i) =>
+    parte.startsWith("**") && parte.endsWith("**") ? (
+      <strong key={i}>{parte.slice(2, -2)}</strong>
+    ) : (
+      <span key={i}>{parte}</span>
+    ),
+  );
+}
+
+// Briefing curto formatado: parágrafos + negrito. Tolera markdown antigo
+// (linhas com #) removendo os hashes de cabeçalho.
+function BriefingText({ text }: { text: string }) {
+  const paragrafos = text
+    .split(/\n\n+/)
+    .map((p) => p.replace(/^#+\s*/gm, "").trim())
+    .filter(Boolean);
+  return (
+    <div className="briefing">
+      {paragrafos.map((p, i) => (
+        <p key={i}>{renderInline(p)}</p>
+      ))}
+    </div>
+  );
+}
+
 // Painel do dropdown: sobre + produtos compatíveis + briefing.
 function DetailPanel({
   detail,
@@ -75,7 +102,7 @@ function DetailPanel({
 
       <div className="section-lbl">Briefing de recomendação NVIDIA</div>
       {detail.briefing ? (
-        <pre className="briefing-md">{detail.briefing}</pre>
+        <BriefingText text={detail.briefing} />
       ) : (
         <div className="muted">Briefing não disponível para esta startup.</div>
       )}

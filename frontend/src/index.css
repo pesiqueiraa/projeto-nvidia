@@ -567,20 +567,25 @@ button,
 .qual-detail .section-lbl:first-child {
   margin-top: 0;
 }
-/* Briefing markdown: mantém a formatação do markdown sem lib externa */
-.briefing-md {
-  white-space: pre-wrap;
-  font-family: var(--font-body);
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--text-dim);
+/* Briefing curto: parágrafos formatados (negrito via renderInline) */
+.briefing {
   background: var(--bg-0);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 14px 16px;
   margin-top: 4px;
-  max-height: 360px;
-  overflow: auto;
+}
+.briefing p {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+.briefing p + p {
+  margin-top: 10px;
+}
+.briefing strong {
+  color: var(--text);
+  font-weight: 600;
 }
 
 /* --- Página Analytics --- */

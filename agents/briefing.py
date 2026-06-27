@@ -31,89 +31,68 @@ class Briefing(BaseModel):
     markdown: str
 
 
-def _fmt(valor) -> str:
-    """Formata um campo opcional para exibição (— quando ausente)."""
-    if not valor:
-        return "—"
-    if isinstance(valor, list):
-        return ", ".join(valor)
-    return str(valor)
+# Quantos produtos citar na narrativa do briefing (curto de propósito).
+_MAX_PRODUTOS_BRIEFING = 2
+
+
+def _cap(texto: str) -> str:
+    """Primeira letra maiúscula (descrição/teses vêm em minúscula do dado bruto)."""
+    t = texto.strip()
+    return t[:1].upper() + t[1:] if t else t
 
 
 def _render_briefing(rec: dict, validated: dict | None,
                      fit: dict | None = None) -> str:
-    """Monta o markdown do briefing a partir dos dados estruturados.
+    """Monta um briefing CURTO de recomendação (no máximo 2 parágrafos).
+
+    Mudança de design: o briefing deixou de ser um relatório longo com várias
+    seções (a página Qualificadas já mostra "Sobre a empresa" e "Produtos
+    compatíveis" em separado). Aqui é uma NARRATIVA enxuta para a NVIDIA:
+      - Parágrafo 1: quem é a empresa + diagnóstico (maturidade + fit Inception).
+      - Parágrafo 2: a recomendação de produtos NVIDIA e por que ajudam a crescer.
+    Continua DETERMINÍSTICO (montado dos dados estruturados, sem LLM e sem
+    alucinação) e usa **negrito** leve — o frontend renderiza formatado.
 
     `rec` é um StartupRecommendation serializado; `validated` é o
     ValidatedStartup correspondente (ou None); `fit` é o FitScore (ou None).
     """
     name = rec["name"]
-    linhas: list[str] = [f"# Briefing executivo — {name}", ""]
+    label = rec["label"]
 
-    # Fit Score com o Inception em destaque, logo no topo (o diferencial).
-    if fit is not None:
-        linhas += [
-            f"**Fit Score Inception: {fit['score']}/100** "
-            f"(prioridade {fit['tier']})",
-            "",
-        ]
-
-    # --- Identidade + classificação (vêm do validated_startups) ---
+    # --- Parágrafo 1: quem é + diagnóstico ---
+    p1 = f"**{name}**"
     if validated is not None:
         startup = validated["classified"]["startup"]
-        classified = validated["classified"]
-        linhas += [
-            f"**Setor:** {_fmt(startup.get('sector'))} · "
-            f"**Estágio:** {_fmt(startup.get('stage'))} · "
-            f"**Funding:** {_fmt(startup.get('funding'))}",
-            "",
-            _fmt(startup.get("description")),
-            "",
-            "## Classificação de maturidade de IA",
-            f"**{classified['label']}** "
-            f"(confiança da evidência: {classified['confidence']})",
-            "",
-            classified.get("rationale", ""),
-            "",
-            "## Validação de evidências",
-            f"Confiança das fontes: **{validated['validation_confidence']}**",
-            f"Ressalvas: {_fmt(validated.get('issues')) or 'nenhuma'}",
-            "",
-        ]
-
-    # --- Stack NVIDIA recomendada (vem do recommendation) ---
-    linhas.append(
-        f"## Stack NVIDIA recomendada (confiança geral: "
-        f"{rec['overall_confidence']})"
-    )
-    if rec["technologies"]:
-        for t in rec["technologies"]:
-            linhas += [
-                f"- **{t['tech']}** — confiança {t['confidence']}",
-                f"  {t.get('summary', '')}",
-                f"  _Como ajuda a crescer:_ {t.get('growth', '')}",
-            ]
-            if t.get("matched_signals"):
-                linhas.append(f"  Sinais: {', '.join(t['matched_signals'])}")
-            if t.get("snippet"):
-                linhas.append(f"  > {t['snippet']}")
-            linhas.append(f"  Fonte: {t['url']}")
+        setor = startup.get("sector")
+        estagio = startup.get("stage")
+        if setor:
+            p1 += f" atua em {setor}"
+        if estagio:
+            p1 += f" ({estagio})"
+        p1 += f" e é classificada como **{label}**"
+        p1 += f" (confiança {validated['classified']['confidence']})."
+        if startup.get("description"):
+            p1 += f" {_cap(startup['description'].rstrip('.'))}."
     else:
-        linhas.append("_Nenhuma tecnologia NVIDIA com fit suficiente identificada._")
-    for nota in rec.get("notes", []):
-        linhas.append(f"- _Nota: {nota}_")
-    linhas.append("")
+        p1 += f" é classificada como **{label}**."
+    if fit is not None:
+        p1 += (f" Fit Score Inception: **{fit['score']}/100** "
+               f"(prioridade {fit['tier']}).")
 
-    # --- Sinal de confiança consolidado (exigência do projeto) ---
-    label = rec["label"]
-    val_conf = validated["validation_confidence"] if validated else "indisponível"
-    linhas += [
-        "## Sinal de confiança",
-        f"Diagnóstico **{label}** · evidências **{val_conf}** · "
-        f"fit NVIDIA **{rec['overall_confidence']}**.",
-    ]
+    # --- Parágrafo 2: recomendação NVIDIA (curta) ---
+    techs = rec.get("technologies", [])[:_MAX_PRODUTOS_BRIEFING]
+    if techs:
+        nomes = " e ".join(f"**{t['tech']}**" for t in techs)
+        p2 = f"Recomendação NVIDIA: {nomes}. "
+        p2 += " ".join(_cap(t["growth"].rstrip(".")) + "."
+                       for t in techs if t.get("growth"))
+        for nota in rec.get("notes", []):
+            p2 += f" {_cap(nota.rstrip('.'))}."
+    else:
+        p2 = ("Nenhum produto NVIDIA apresentou fit suficiente para o perfil "
+              "atual — recomenda-se reavaliar após enriquecer os dados da empresa.")
 
-    return "\n".join(linhas)
+    return f"{p1}\n\n{p2}"
 
 
 def briefing_node(state: RadarState) -> dict:
