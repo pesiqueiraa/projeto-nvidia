@@ -56,6 +56,29 @@ def test_enricher_descobre_site_via_busca_quando_nao_tem_url(patch_enricher):
     assert "1 sites descobertos" in out["messages"][0][1]
 
 
+def test_enricher_escala_para_navegador_quando_estatico_vem_vazio(patch_enricher):
+    # SPA: o HTTP puro devolve um shell sem conteúdo (trafilatura -> None);
+    # o enricher escala para o navegador, que renderiza o JS e traz o texto.
+    html_real = (FIXTURES / "startup_page.html").read_text(encoding="utf-8")
+    patch_enricher.setattr(
+        "agents.enricher.fetch_static",
+        lambda *a, **k: Selector("<html><body><div id='root'></div></body></html>"),
+    )
+    patch_enricher.setattr(
+        "agents.enricher.fetch_dynamic", lambda *a, **k: Selector(html_real)
+    )
+    state = {"raw_startups": [
+        {"name": "Salvy", "source": "latitud.com",
+         "source_url": "https://www.latitud.com/portfolio",
+         "detail_url": "https://salvy.com.br"},
+    ]}
+    out = enricher_node(state)
+
+    assert out["raw_startups"][0]["content"] is not None
+    assert "telefonia móvel para empresas" in out["raw_startups"][0]["content"]
+    assert "1 via navegador" in out["messages"][0][1]
+
+
 def test_enricher_sem_site_descoberto_fica_sem_content(patch_enricher):
     # busca não encontra nada (fake retorna None) -> content permanece None
     state = {"raw_startups": [
