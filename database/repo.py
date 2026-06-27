@@ -184,8 +184,31 @@ def analytics() -> dict:
         cur.execute("SELECT sector, count(*)::int AS count FROM startups GROUP BY sector")
         by_sector = bucket_sectors(cur.fetchall())
 
+        # Produtos NVIDIA mais recomendados no ecossistema: explode o array
+        # `technologies` do JSONB `recommendations` e conta cada `tech`. É a visão
+        # de DEMANDA por produto NVIDIA — o motor de recomendação agregado.
+        cur.execute(
+            """
+            SELECT tech, count(*)::int AS count FROM (
+                SELECT jsonb_array_elements(recommendations->'technologies')->>'tech' AS tech
+                FROM startups WHERE recommendations IS NOT NULL
+            ) t WHERE tech IS NOT NULL
+            GROUP BY tech ORDER BY count DESC LIMIT 8
+            """
+        )
+        by_nvidia_tech = cur.fetchall()
+
+        # Cobertura: quantas startups receberam ao menos um produto NVIDIA.
+        cur.execute(
+            "SELECT count(*)::int AS c FROM startups WHERE recommendations IS NOT NULL "
+            "AND jsonb_array_length(recommendations->'technologies') > 0"
+        )
+        with_reco = cur.fetchone()["c"]
+
     return {
         "total": base["total"],
         "by_classification": by_classification,
         "by_sector": by_sector,
+        "by_nvidia_tech": by_nvidia_tech,
+        "with_reco": with_reco,
     }

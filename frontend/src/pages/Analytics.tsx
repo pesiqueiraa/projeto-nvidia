@@ -61,6 +61,7 @@ export default function Analytics() {
 
   const maxClass = Math.max(1, ...(data?.by_classification.map((d) => d.count) ?? [1]));
   const maxSector = Math.max(1, ...(data?.by_sector.map((d) => d.count) ?? [1]));
+  const maxTech = Math.max(1, ...(data?.by_nvidia_tech.map((d) => d.count) ?? [1]));
 
   // KPIs derivados da distribuição de maturidade (dados que já temos).
   const porLabel = Object.fromEntries(
@@ -102,6 +103,10 @@ export default function Analytics() {
               <div className="kpi-num">{pctIA}%</div>
               <div className="kpi-lbl">usam IA (native + enabled)</div>
             </div>
+            <div className="kpi">
+              <div className="kpi-num">{data.with_reco}</div>
+              <div className="kpi-lbl">com stack NVIDIA</div>
+            </div>
           </div>
 
           <div className="an-card">
@@ -122,6 +127,19 @@ export default function Analytics() {
               data={data.by_sector.map((d) => ({ label: d.sector, count: d.count }))}
               max={maxSector}
             />
+          </div>
+
+          <div className="an-card">
+            <div className="section-lbl">Produtos NVIDIA mais recomendados</div>
+            {data.by_nvidia_tech.length === 0 ? (
+              <div className="muted">Nenhuma recomendação registrada ainda.</div>
+            ) : (
+              <BarList
+                data={data.by_nvidia_tech.map((d) => ({ label: d.tech, count: d.count }))}
+                max={maxTech}
+                colorOf={() => "fill-green"}
+              />
+            )}
           </div>
         </>
       )}

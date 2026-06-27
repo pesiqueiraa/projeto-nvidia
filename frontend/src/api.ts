@@ -73,6 +73,8 @@ export interface Analytics {
   total: number;
   by_classification: { classification: string; count: number }[];
   by_sector: { sector: string; count: number }[];
+  by_nvidia_tech: { tech: string; count: number }[];
+  with_reco: number; // startups com ao menos um produto NVIDIA recomendado
 }
 
 export async function getAnalytics(): Promise<Analytics> {
