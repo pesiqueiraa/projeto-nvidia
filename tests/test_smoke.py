@@ -7,6 +7,7 @@ Rode com: `uv run pytest`
 from fastapi.testclient import TestClient
 
 from agents.graph import graph
+from agents.search_planner import SOURCE_CATALOG
 from api.main import app
 
 client = TestClient(app)
@@ -32,9 +33,9 @@ def test_graph_runs_full_pipeline_to_briefing(
     nenhum e encerra em END.
     """
     final = graph.invoke({"query": "fintechs de IA"})
-    # search_planner_node devolve o que o LLM falso produziu
+    # search_planner_node usa os termos do LLM falso e varre TODAS as fontes
     assert final["search_terms"] == fixed_search_plan.search_terms
-    assert final["sources"] == fixed_search_plan.sources
+    assert final["sources"] == sorted(SOURCE_CATALOG)
     # scraper não encontrou adapter para essas fontes -> coleta vazia
     assert final["raw_startups"] == []
     # cada etapa subsequente recebe lista vazia e a propaga vazia
@@ -47,10 +48,10 @@ def test_graph_runs_full_pipeline_to_briefing(
     assert final["briefings"] == []
     # validator rodou uma vez; lista vazia -> seguiu pela cauda do pipeline e END
     assert final["validation_attempts"] == 1
-    # messages (reducer add_messages): 1 planner + 1 por fonte (scraper)
-    # + relevance + enricher + extractor + classifier + evidence_validator
-    # + rag + recommendation + briefing
-    assert len(final["messages"]) == 1 + len(fixed_search_plan.sources) + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
+    # messages (reducer add_messages): 1 planner + 1 por fonte (scraper, que agora
+    # varre TODAS as fontes) + relevance + enricher + extractor + classifier
+    # + evidence_validator + rag + recommendation + briefing
+    assert len(final["messages"]) == 1 + len(final["sources"]) + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
 
 
 def test_demo_plan_endpoint(patch_get_llm, patch_scraper_offline, fixed_search_plan):
@@ -59,4 +60,4 @@ def test_demo_plan_endpoint(patch_get_llm, patch_scraper_offline, fixed_search_p
     assert resp.status_code == 200
     body = resp.json()
     assert body["search_terms"] == fixed_search_plan.search_terms
-    assert body["sources"] == fixed_search_plan.sources
+    assert body["sources"] == sorted(SOURCE_CATALOG)

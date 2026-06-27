@@ -3,22 +3,21 @@
 from agents.search_planner import SOURCE_CATALOG, search_planner_node
 
 
-def test_search_planner_node_returns_llm_plan(patch_get_llm, fixed_search_plan):
+def test_search_planner_usa_termos_do_llm_e_todas_as_fontes(patch_get_llm, fixed_search_plan):
     resultado = search_planner_node({"query": "fintechs de IA"})
 
     assert resultado["search_terms"] == fixed_search_plan.search_terms
-    assert resultado["sources"] == fixed_search_plan.sources
+    # RECALL: varre TODAS as fontes com adapter, não só as que o LLM sugeriu.
+    assert resultado["sources"] == sorted(SOURCE_CATALOG)
     assert len(resultado["messages"]) == 1
 
 
-def test_search_planner_node_filters_sources_outside_catalog(patch_get_llm, fixed_search_plan):
-    # Mistura uma fonte válida com uma fora do catálogo na resposta do LLM falso.
-    # `fixed_search_plan` é o mesmo objeto que o FakeLLM devolve (mutação é vista
-    # no `.invoke()`, já que `patch_get_llm` guarda a referência, não uma cópia).
+def test_search_planner_ignora_fontes_do_llm_e_varre_o_catalogo(patch_get_llm, fixed_search_plan):
+    # Mesmo que o LLM sugira fontes parciais ou fora do catálogo, o planner
+    # varre o catálogo inteiro (a escolha de fontes do LLM não gateia o recall).
     fixed_search_plan.sources = ["wow.ac", "site-fora-do-catalogo.com"]
 
     resultado = search_planner_node({"query": "qualquer coisa"})
 
-    assert resultado["sources"] == ["wow.ac"]
+    assert resultado["sources"] == sorted(SOURCE_CATALOG)
     assert "site-fora-do-catalogo.com" not in resultado["sources"]
-    assert "wow.ac" in SOURCE_CATALOG  # catálogo real (registry) contém a fonte válida

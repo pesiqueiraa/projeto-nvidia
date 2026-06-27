@@ -8,7 +8,6 @@ algo que já bate com o schema `SearchPlan`, em vez de texto livre que
 precisaria de parsing manual.
 """
 from langchain_core.messages import HumanMessage, SystemMessage
-from loguru import logger
 from pydantic import BaseModel
 
 from agents.state import RadarState
@@ -71,22 +70,21 @@ def search_planner_node(state: RadarState) -> dict:
     ]
     plan: SearchPlan = structured_llm.invoke(prompt)
 
-    fontes_validas = [s for s in plan.sources if s in SOURCE_CATALOG]
-    fontes_invalidas = [s for s in plan.sources if s not in SOURCE_CATALOG]
-    if fontes_invalidas:
-        logger.warning(
-            "search_planner sugeriu fontes fora do catálogo, descartando: {}",
-            fontes_invalidas,
-        )
+    # RECALL: o catálogo atual é só de diretórios GERAIS (não pesquisáveis por
+    # setor), então restringir fontes não melhora o recall — varremos TODAS as
+    # fontes com adapter. A seleção de fontes do LLM fica reservada para quando
+    # houver fontes SETORIAIS (aí escolher faz diferença). O LLM segue valioso
+    # pelos `search_terms`, que o filtro de relevância usa.
+    sources = sorted(SOURCE_CATALOG)
 
     return {
         "search_terms": plan.search_terms,
-        "sources": fontes_validas,
+        "sources": sources,
         "messages": [
             (
                 "ai",
                 f"[search_planner] {plan.reasoning} | termos: {plan.search_terms} | "
-                f"fontes: {fontes_validas}",
+                f"fontes (todas): {sources}",
             )
         ],
     }

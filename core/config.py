@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # POOL de descoberta por fonte: quantos nomes cada diretório contribui para
     # o filtro de relevância julgar. Maior = mais recall (mais chance de achar
     # startups do tema), porém prompt maior no filtro. Só nomes — barato.
-    max_startups_per_source: int = 15
+    max_startups_per_source: int = 30
     # Quantas startups SOBREVIVEM ao filtro de relevância e seguem para o
     # enriquecimento/qualificação (a parte cara: busca web + LLM + RAG). É o que
     # de fato limita custo/tempo e o rate limit da chave Trial do Cohere.
