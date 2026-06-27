@@ -21,6 +21,7 @@ from loguru import logger
 from psycopg.rows import dict_row
 
 from core.config import settings
+from core.sectors import bucket_sectors
 
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 # Confiança categórica (high/medium/low) -> numérico 0..1 para a coluna.
@@ -148,12 +149,13 @@ def analytics() -> dict:
         )
         by_classification = cur.fetchall()
 
-        # Top setores
-        cur.execute(
-            "SELECT coalesce(sector, '—') AS sector, count(*)::int AS count "
-            "FROM startups GROUP BY sector ORDER BY count DESC LIMIT 8"
-        )
-        by_sector = cur.fetchall()
+        # Top setores — o banco CONTA por string crua (texto livre do Extractor),
+        # e o resultado é dobrado numa TAXONOMIA fixa em Python (core/sectors.py):
+        # cada setor cru cai num bucket concreto e conhecido (ou "Outros") em vez
+        # de cada string virar um setor próprio (o que trazia '—' e jargões soltos
+        # como "agtech"). O DB conta; a taxonomia mora num lugar só.
+        cur.execute("SELECT sector, count(*)::int AS count FROM startups GROUP BY sector")
+        by_sector = bucket_sectors(cur.fetchall())
 
         # Distribuição por faixa de Fit Score (os mesmos cortes do fit_score)
         cur.execute(

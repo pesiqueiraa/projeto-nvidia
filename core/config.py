@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     # Quantas startups SOBREVIVEM ao filtro de relevância e seguem para o
     # enriquecimento/qualificação (a parte cara: busca web + LLM + RAG). É o que
     # de fato limita custo/tempo e o rate limit da chave Trial do Cohere.
-    max_startups: int = 6
+    max_startups: int = 10
 
     # --- Bancos ---
     database_url: str = "postgresql://nvision:nvision@localhost:5432/nvision"

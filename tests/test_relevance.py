@@ -35,16 +35,35 @@ def _raw(*nomes):
     return [{"name": n, "source": "x", "source_url": "u"} for n in nomes]
 
 
-def test_mantem_apenas_os_selecionados_pelo_llm(monkeypatch):
+def test_prioriza_relevantes_e_completa_ate_o_teto(monkeypatch):
+    # Com folga no teto, as selecionadas vêm primeiro e a lista é completada com
+    # as demais descobertas (na ordem de descoberta) — nunca volta curta.
+    from core.config import settings
+    monkeypatch.setattr(settings, "max_startups", 10)
     _patch(monkeypatch, _Selection(selected_names=["AbacatePay", "Bamboo DCM"],
                                    reasoning="fintechs"))
     state = {"query": "startups de finanças", "search_terms": ["fintech"],
              "raw_startups": _raw("AbacatePay", "CleanCloud", "Bamboo DCM", "Squid")}
     out = relevance_node(state)
 
-    nomes = {r["name"] for r in out["raw_startups"]}
-    assert nomes == {"AbacatePay", "Bamboo DCM"}   # lavanderia e energia foram dropadas
-    assert "2/4" in out["messages"][0][1]
+    nomes = [r["name"] for r in out["raw_startups"]]
+    assert nomes == ["AbacatePay", "Bamboo DCM", "CleanCloud", "Squid"]
+    assert "4/4" in out["messages"][0][1]
+
+
+def test_completa_respeitando_o_teto(monkeypatch):
+    # Teto menor que o pool: prioriza as selecionadas e completa só até o teto.
+    from core.config import settings
+    monkeypatch.setattr(settings, "max_startups", 3)
+    _patch(monkeypatch, _Selection(selected_names=["Bamboo DCM"], reasoning="fintech"))
+    state = {"query": "finanças", "search_terms": [],
+             "raw_startups": _raw("AbacatePay", "CleanCloud", "Bamboo DCM", "Squid")}
+    out = relevance_node(state)
+
+    nomes = [r["name"] for r in out["raw_startups"]]
+    assert nomes[0] == "Bamboo DCM"          # selecionada vem primeiro
+    assert len(nomes) == 3                    # completada até o teto
+    assert "Bamboo DCM" in nomes and len(set(nomes)) == 3  # sem duplicar
 
 
 def test_casamento_de_nome_e_case_insensitive(monkeypatch):

@@ -92,8 +92,15 @@ def relevance_node(state: RadarState) -> dict:
         filtradas = raw_startups[: settings.max_startups]
         nota = "fallback (nada relevante selecionado)"
     else:
-        filtradas = filtradas[: settings.max_startups]
-        nota = "filtradas por relevância"
+        # Garante SEMPRE entregar até `max_startups`: as selecionadas por
+        # relevância vêm primeiro; se forem menos que o teto, completamos com as
+        # demais startups descobertas (na ordem de descoberta), sem duplicar. O
+        # fit_score rankeia tudo depois, então as de complemento ficam no fim por
+        # mérito — mas a lista nunca volta curta só porque o filtro foi seletivo.
+        ja_incluidas = {id(r) for r in filtradas}
+        complemento = [r for r in raw_startups if id(r) not in ja_incluidas]
+        filtradas = (filtradas + complemento)[: settings.max_startups]
+        nota = "filtradas por relevância (completadas até o teto)"
 
     return {
         "raw_startups": filtradas,

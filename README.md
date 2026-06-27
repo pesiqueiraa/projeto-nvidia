@@ -77,6 +77,7 @@ O ambiente ainda não tem essas ferramentas. Com Homebrew:
 # uv — gerencia Python 3.12 e o venv do backend (rápido)
 brew install uv
 
+
 # Docker Desktop — sobe Postgres + Qdrant
 brew install --cask docker
 # depois abra o Docker Desktop uma vez para iniciar o daemon
