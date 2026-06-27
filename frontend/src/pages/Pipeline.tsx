@@ -199,7 +199,7 @@ export default function Pipeline() {
                     {t.tech}
                   </a>
                   <span className={`badge ${confClass(t.confidence)}`}>
-                    fit {t.fit}/100 · {t.confidence}
+                    {t.confidence}
                   </span>
                 </div>
                 <div className="tech-summary">{t.summary}</div>

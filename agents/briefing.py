@@ -89,7 +89,7 @@ def _render_briefing(rec: dict, validated: dict | None,
     if rec["technologies"]:
         for t in rec["technologies"]:
             linhas += [
-                f"- **{t['tech']}** — fit {t['fit']}/100 (confiança {t['confidence']})",
+                f"- **{t['tech']}** — confiança {t['confidence']}",
                 f"  {t.get('summary', '')}",
                 f"  _Como ajuda a crescer:_ {t.get('growth', '')}",
             ]
