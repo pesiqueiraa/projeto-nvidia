@@ -1,16 +1,22 @@
-# NVISION — NVIDIA Startup AI Radar
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" src="assets/logo_branco.svg">
+    <img src="assets/logo_preto.svg" alt="NVISION" height="60">
+  </picture>
+</p>
 
-Plataforma multi-agente de inteligência estratégica que mapeia, qualifica e
-nutre startups brasileiras com potencial **AI-native** para o programa
-**NVIDIA Inception**. Projeto da liga universitária de IA — o foco é
-**aprender na prática** LangGraph, RAG com reranking, scraping e o
-ecossistema NVIDIA.
+<h1 align="center">NVISION — NVIDIA Startup AI Radar</h1>
 
-> Documentação de UX/arquitetura completa em [`artefatos/ux.md`](artefatos/ux.md).
+<p align="center">
+  Plataforma multi-agente que mapeia, qualifica e nutre startups brasileiras
+  <br><b>AI-native</b> com potencial para o programa <b>NVIDIA Inception</b>.
+</p>
 
 ---
 
-## 🔄 Pipeline multi-agente
+Projeto da liga universitária de IA. O foco é **aprender na prática** LangGraph, RAG com reranking, scraping e o ecossistema NVIDIA — a documentação completa de
+
+## Pipeline multi-agente
 
 A consulta do gestor percorre **8 agentes** orquestrados por LangGraph,
 organizados em três blocos: **coleta**, **qualificação** e **recomendação**.
@@ -40,98 +46,58 @@ flowchart TD
     BR --> OUT([Briefing executivo])
 
     classDef done fill:#76b900,stroke:#5a8c00,color:#080a07;
-    class SP done;
+    class SP,SC,EX,CL,EV,RAG,RE,BR done;
 ```
 
+**A aresta condicional importa.** O fluxo não é linear: o **Evidence Validator** decide o próximo passo conforme o nível de confiança. Se a evidência for sólida, segue para o NVIDIA RAG; se for fraca, o grafo **volta ao Scraper** para coletar mais dados. É esse roteamento condicional com estado compartilhado que justifica usar LangGraph em vez de encadear funções.
 
-
-**A aresta condicional importa.** O fluxo não é totalmente linear: o **Evidence Validator** decide o próximo passo conforme o nível de confiança calculado. Se a evidência for sólida, segue para o NVIDIA RAG; se for fraca ou insuficiente, o grafo **volta ao Scraper** para coletar mais dados antes de prosseguir. É esse roteamento condicional com estado compartilhado que justifica usar LangGraph em vez de simplesmente encadear funções — e é um dos principais objetivos de aprendizado do projeto.
-
----
-
-## 🗂️ Estrutura
+## Estrutura
 
 ```
-agents/        # Agentes LangGraph (State, Node, Edge) — começa com grafo de 2 nós
+agents/        # Agentes LangGraph (State, Node, Edge)
 core/          # Config (.env) + abstração de LLM por env var
 api/           # Backend FastAPI (REST + WebSocket)
 scraping/      # Coleta de dados públicos (Playwright, BeautifulSoup, trafilatura)
 rag/           # RAG NVIDIA: ingestão, chunking, embeddings, retrieval, reranking
 recommender/   # Motor de recomendação de tecnologias NVIDIA
-database/      # Schema PostgreSQL (schema.sql aplicado pelo docker-compose)
+database/      # Schema PostgreSQL (aplicado pelo docker-compose)
 frontend/      # Interface web (Vite + React + TS)
 tests/         # Testes de fumaça
 docker-compose.yml   # Postgres + Qdrant locais
 ```
 
-Cada módulo tem o **seu próprio README** explicando o quê, o porquê e o que
-se aprendeu.
 
----
+## Pré-requisitos
 
-## ✅ Pré-requisitos (instalar uma vez)
+Instale duas ferramentas:
 
-O ambiente ainda não tem essas ferramentas. Com Homebrew:
+- **[uv](https://docs.astral.sh/uv/getting-started/installation/)** — gerencia o Python 3.12 e o venv
+- **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** — sobe Postgres + Qdrant (abra uma vez após instalar)
 
-```bash
-# uv — gerencia Python 3.12 e o venv do backend (rápido)
-brew install uv
-
-
-# Docker Desktop — sobe Postgres + Qdrant
-brew install --cask docker
-# depois abra o Docker Desktop uma vez para iniciar o daemon
-```
-
-> ⚠️ O backend é fixado em **Python 3.12** (`pyproject.toml`). O Python 3.14
-> do sistema ainda não tem wheels para várias libs (langgraph, playwright,
-> qdrant-client, psycopg). O `uv` instala o 3.12 isoladamente — não mexe no
-> Python do sistema.
-
----
-
-## 🚀 Setup do backend
+## Backend
 
 ```bash
-# 1. Instala o Python 3.12 e as dependências num venv isolado
 uv python install 3.12
-uv sync
-
-# 2. Navegadores do Playwright (Entregável 1)
-uv run playwright install chromium
-
-# 3. Variáveis de ambiente
-cp .env.example .env        # preencha as chaves quando definir o provider de LLM
-
-# 4. Sobe os bancos (precisa do Docker rodando)
-docker compose up -d
-
-# 5. Sobe a API
-uv run uvicorn api.main:app --reload
-#    Health:  http://localhost:8000/health
-#    Docs:    http://localhost:8000/docs
+uv sync                                   # dependências num venv isolado
+uv run playwright install chromium        # navegadores do scraper
+cp .env.example .env                      # preencha as chaves de API
+docker compose up -d                      # sobe Postgres + Qdrant (precisa do Docker)
+uv run uvicorn api.main:app --reload      # API em http://localhost:8000 (/docs, /health)
 ```
 
-Rodar o grafo LangGraph isolado (2 nós: `search_planner` real + `echo`
-placeholder). Exige `LLM_PROVIDER` e a chave correspondente preenchidos no
-`.env` — o primeiro nó já chama um LLM de verdade:
+Rodar o grafo LangGraph isolado (exige `LLM_PROVIDER` + chave no `.env`):
 
 ```bash
 uv run python -m agents.graph
 ```
 
-Sem chave configurada, prefira `uv run pytest` — os testes usam um LLM
-falso e não dependem de rede nem de chave de API.
-
-Testes de fumaça (não exigem chaves nem bancos no ar):
+Testes de fumaça (usam um LLM falso — não exigem chaves nem bancos no ar):
 
 ```bash
 uv run pytest
 ```
 
----
-
-## 🎨 Setup do frontend
+## Frontend
 
 ```bash
 cd frontend
@@ -139,12 +105,5 @@ npm install
 npm run dev      # http://localhost:5173 (faz proxy de /api para o backend)
 ```
 
----
-
-## 🧭 Onde estamos
-
-Fundação (Semana 0): estrutura, configs, abstração de LLM, grafo de 2 nós,
-API `/health` + demo, schema do banco e shell do frontend com as 5 rotas.
-
-Próximo (**Semana 1** do roadmap — ux.md §10): Search Planner Agent +
-Scraper Agent reais e a **página Pipeline completa** com live log.
+Páginas: **Pipeline** (execução com live log), **Qualificadas** (startups
+classificadas + briefing) e **Analytics** (KPIs de maturidade de IA e cobertura).
