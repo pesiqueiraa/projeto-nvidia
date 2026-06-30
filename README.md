@@ -14,7 +14,7 @@
 
 ---
 
-Projeto da liga universitária de IA. O foco é **aprender na prática** LangGraph, RAG com reranking, scraping e o ecossistema NVIDIA — a documentação completa de
+Projeto da liga universitária de IA. O foco é **aprender na prática** LangGraph, RAG com reranking, scraping e o ecossistema NVIDIA — a documentação completa de cada agente vive em `artefatos/`.
 
 ## Pipeline multi-agente
 

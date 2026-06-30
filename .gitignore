@@ -10,9 +10,6 @@ venv/
 env/
 .python-version
 
-# Gerenciador uv
-uv.lock
-
 # --- Variáveis de ambiente / segredos (NUNCA comitar chaves) ---
 .env
 .env.local
@@ -43,7 +40,6 @@ yarn-error.log*
 data/
 qdrant_storage/
 postgres_data/
-CLAUDE.md
 
 # --- Sistema operacional / editor ---
 .DS_Store
