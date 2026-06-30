@@ -10,7 +10,7 @@ Por que DETERMINÍSTICO (sem LLM) e não gerado por modelo:
     citação tem de bater com o que o pipeline apurou. Gerar o relatório por LLM
     abriria espaço para alucinação justo no produto entregue — risco que não se
     justifica aqui. Montamos o markdown a partir dos dados estruturados.
-  - Sinalizar SEMPRE o nível de confiança é exigência do projeto (CLAUDE.md):
+  - Sinalizar SEMPRE o nível de confiança é exigência do projeto:
     o briefing consolida os sinais de evidência (textual e validação de
     fontes) num só lugar.
   Uma camada de NARRATIVA via LLM (resumo executivo em prosa por cima dos

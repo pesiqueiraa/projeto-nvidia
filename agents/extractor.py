@@ -12,7 +12,7 @@ Decisões de design:
     startups. Batching fica como otimização futura.
   - `content=None` => extração SEM LLM: monta o mínimo a partir de name/sector.
     Sem evidência textual, perguntar ao LLM só convidaria alucinação — o jeito
-    mais honesto de "não inventar" é não perguntar (CLAUDE.md).
+    mais honesto de "não inventar" é não perguntar.
   - `extraction_basis` ("content"/"metadata") sinaliza de onde veio cada
     extração — um sinal de confiança barato pro evidence_validator adiante.
   - Erro POR STARTUP: uma extração que falha vira fallback metadata + log, não

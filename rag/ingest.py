@@ -14,7 +14,7 @@ Decisões de design (mesmas disciplinas do resto do repo):
     NVIDIA são SPA pesadas em JS e podem render pouco conteúdo por essa via —
     elas caem como "não ingeridas" e ficam para um passo futuro (DynamicFetcher).
   - Erro POR FONTE: uma página fora do ar ou sem texto aproveitável vira `None`
-    e é registrada, sem derrubar a ingestão das demais (CLAUDE.md).
+    e é registrada, sem derrubar a ingestão das demais.
   - Saída em JSONL (um doc por linha): fácil de inspecionar, versionar e
     alimentar o indexador depois.
 """
@@ -51,7 +51,7 @@ class NvidiaDoc(BaseModel):
         return len(self.text)
 
 
-# Fonte da verdade da base NVIDIA (CLAUDE.md §Base de conhecimento + artefatos/ux.md §8.2).
+# Fonte da verdade da base NVIDIA (brief §Base de conhecimento + artefatos/ux.md §8.2).
 # Cada entrada vira (na melhor das hipóteses) um NvidiaDoc no corpus.
 NVIDIA_SOURCES: list[NvidiaSource] = [
     NvidiaSource(tech="NVIDIA Inception", url="https://www.nvidia.com/en-us/startups/"),

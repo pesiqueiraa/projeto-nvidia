@@ -12,7 +12,7 @@ class ScrapeError(RuntimeError):
     """Falha ao coletar de uma fonte.
 
     Tratada POR FONTE no `scraper_node`, para que uma fonte quebrada não
-    derrube as demais (CLAUDE.md — "tratamento de erro explícito").
+    derrube as demais (tratamento de erro explícito).
     """
 
 

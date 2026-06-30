@@ -2,7 +2,7 @@
 
 > Como o NVISION valida a confiança de cada diagnóstico e — o conceito novo —
 > faz o grafo **voltar atrás** quando a evidência é fraca. Documento de
-> aprendizado (CLAUDE.md): o foco é **expor a mecânica**, não escondê-la.
+> aprendizado: o foco é **expor a mecânica**, não escondê-la.
 
 ---
 
@@ -29,7 +29,7 @@ do grafo:
 ## 2. A decisão de filosofia: **regras, sem LLM**
 
 Diferente do Extractor e do Classifier, o Validator **não usa LLM**. É a
-aplicação direta da dica do CLAUDE.md — "estruture como regras explícitas antes
+aplicação direta da dica do projeto — "estruture como regras explícitas antes
 de usar LLM".
 
 Por que aqui isso é a escolha certa, não preguiça:

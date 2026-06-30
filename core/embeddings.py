@@ -22,7 +22,7 @@ def get_embeddings() -> Embeddings:
     """Retorna o modelo de embeddings configurado via `EMBEDDING_MODEL`.
 
     Usa a chave da OpenAI (mesma do LLM). Falha cedo e com mensagem clara se a
-    chave faltar — "tratamento de erro explícito" (CLAUDE.md).
+    chave faltar — "tratamento de erro explícito".
     """
     if not settings.openai_api_key:
         raise RuntimeError(

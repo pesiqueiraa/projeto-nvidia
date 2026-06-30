@@ -7,12 +7,12 @@ viveria só durante a requisição e se perderia.
 
 Decisões de design:
   - `psycopg` direto (sem ORM): expõe o SQL de verdade, alinhado ao objetivo
-    didático do projeto (CLAUDE.md). As queries ficam à mostra.
+    didático do projeto. As queries ficam à mostra.
   - UPSERT por `name` (chave natural): re-rodar a mesma busca ATUALIZA a startup
     em vez de duplicar — a lista Qualificadas acumula sem lixo.
   - Persistência RESILIENTE: `persist_pipeline_result` nunca propaga erro de
     banco — o usuário recebe o resultado do pipeline mesmo se a gravação falhar
-    (tratamento de erro explícito — CLAUDE.md).
+    (tratamento de erro explícito).
 """
 from pathlib import Path
 

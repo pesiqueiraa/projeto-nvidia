@@ -2,7 +2,7 @@
 
 > Como o NVISION transforma texto bruto de uma startup em dados estruturados,
 > por que foi construído assim e o que cada decisão ensina. Documento de
-> aprendizado (CLAUDE.md): o foco é **expor a mecânica**, não escondê-la.
+> aprendizado: o foco é **expor a mecânica**, não escondê-la.
 
 ---
 
@@ -90,7 +90,7 @@ def _so_metadata(name, sector):
 
 **Por quê:** sem texto, perguntar ao LLM "o que essa empresa faz?" só com o nome
 **convida alucinação**. O jeito mais honesto de cumprir o "não inventar dados"
-(CLAUDE.md) é **não perguntar**. Bônus: é mais barato e trivial de testar
+é **não perguntar**. Bônus: é mais barato e trivial de testar
 (esse caminho nem toca a costura `get_llm`).
 
 > Contraste com o caminho normal: quem tem `content` vai ao LLM e volta com
@@ -115,7 +115,7 @@ for rs in raw_startups:
         ... _so_metadata()   # fallback: não perde a startup
 ```
 
-Duas decisões herdadas do Scraper/Enricher (CLAUDE.md — "tratamento de erro
+Duas decisões herdadas do Scraper/Enricher ("tratamento de erro
 explícito"):
 
 - **Erro isolado por item.** Uma startup que estoura o LLM vira fallback

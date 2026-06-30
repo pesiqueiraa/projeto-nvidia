@@ -7,7 +7,7 @@ um que tenha adapter, descobre startups na listagem/portfólio. Escreve
 Por que a orquestração mora aqui e a lógica de HTML não: o nó é AGNÓSTICO de
 fonte. Toda a mecânica de cada site vive no adapter (scraping/). O nó apenas
 itera, agrega e trata erro POR FONTE — uma fonte quebrada vira um log de erro,
-não derruba a coleta inteira (CLAUDE.md — tratamento de erro explícito).
+não derruba a coleta inteira (tratamento de erro explícito).
 
 Idempotente: re-executar (ex.: no loop de baixa confiança do Evidence
 Validator) simplesmente recoleta e sobrescreve `raw_startups`.

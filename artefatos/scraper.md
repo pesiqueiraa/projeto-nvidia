@@ -1,7 +1,7 @@
 # Scraper Agent — guia didático
 
 > Como o NVISION descobre startups nas fontes públicas, por que foi construído
-> assim e o que cada decisão ensina. Documento de aprendizado (CLAUDE.md):
+> assim e o que cada decisão ensina. Documento de aprendizado:
 > o foco é **expor a mecânica**, não escondê-la.
 
 ---
@@ -32,7 +32,7 @@ Adotamos o [**Scrapling**](https://github.com/D4Vinci/Scrapling) como scraper
 principal — um framework que unifica numa lib só o que normalmente exigiria
 quatro (requests, Playwright, BeautifulSoup, Scrapy).
 
-**A tensão honesta:** o CLAUDE.md pede para *expor a mecânica* de cada
+**A tensão honesta:** o projeto pede para *expor a mecânica* de cada
 tecnologia, e o Scrapling é um wrapper que *esconde* parte dela. A decisão
 consciente foi: usar o Scrapling pela robustez (anti-bot, render JS, seletores
 adaptativos), **mas compensar com documentação** — é o que este arquivo faz.

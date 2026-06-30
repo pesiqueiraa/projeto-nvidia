@@ -13,7 +13,7 @@ Decisões de design:
   - Client INJETÁVEL (igual a embeddings/Qdrant): produção usa o Cohere real;
     testes usam um fake determinístico — sem rede, sem chave.
   - Guardamos os DOIS scores (vetorial original + rerank) no resultado, para a
-    comparação antes/depois que o CLAUDE.md pede no Entregável 3.
+    comparação antes/depois que o projeto pede no Entregável 3.
   - `rerank-v3.5`: modelo multilíngue da Cohere (as queries podem vir em PT e a
     base está em EN — o cross-encoder multilíngue lida com isso).
 """
@@ -40,7 +40,7 @@ class RerankedChunk(BaseModel):
 
 
 def get_cohere_client():
-    """Cliente Cohere V2. Falha cedo e claro se a chave faltar (CLAUDE.md)."""
+    """Cliente Cohere V2. Falha cedo e claro se a chave faltar."""
     if not settings.cohere_api_key:
         raise RuntimeError(
             "Reranking exige COHERE_API_KEY, mas está vazio. Preencha no .env."
@@ -119,7 +119,7 @@ def retrieve_and_rerank(
 
     Se o rerank falhar (rate limit/instabilidade do Cohere), DEGRADA para o
     retrieval vetorial puro em vez de propagar o erro — o RAG não pode parar por
-    causa do reranker (tratamento de erro explícito — CLAUDE.md).
+    causa do reranker (tratamento de erro explícito).
     """
     kwargs = {"client": qdrant_client, "embeddings": embeddings}
     if collection_name is not None:

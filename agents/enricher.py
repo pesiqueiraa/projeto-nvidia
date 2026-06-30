@@ -18,7 +18,7 @@ Decisões de design:
     caía em "metadata" (e era rotulada como Non-AI à toa). O navegador resolve
     isso, ao custo de ser mais lento — por isso só entra quando o estático falha.
   - Erro POR STARTUP: um site fora do ar / não encontrado vira `content=None`,
-    não derruba os demais (mesma disciplina do Scraper — CLAUDE.md).
+    não derruba os demais (mesma disciplina do Scraper).
   - Naturalmente educado com servidores: cada `detail_url` é um domínio
     diferente (o site da própria startup), então não martelamos ninguém.
 """

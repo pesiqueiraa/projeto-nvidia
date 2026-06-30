@@ -5,7 +5,7 @@ MESMO espaço vetorial usado na indexação (`core.embeddings`) e pede ao Qdrant
 `top_k` chunks mais próximos por cosseno. Cada resultado carrega a proveniência
 (tech + url) — é o que vira CITAÇÃO no briefing.
 
-Por que SEM reranking ainda? O CLAUDE.md (Entregável 3) pede medir a qualidade
+Por que SEM reranking ainda? O projeto (Entregável 3) pede medir a qualidade
 do retrieval puro primeiro e só depois adicionar o Cohere Rerank, para enxergar
 o ganho que ele traz. Este módulo é esse baseline; o reranker entra no próximo
 commit, embrulhando estes resultados.

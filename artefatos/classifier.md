@@ -1,8 +1,8 @@
 # Startup Classifier Agent — guia didático
 
 > Como o NVISION rotula a maturidade de IA de cada startup, por que foi
-> construído assim e o que cada decisão ensina. Documento de aprendizado
-> (CLAUDE.md): o foco é **expor a mecânica**, não escondê-la.
+> construído assim e o que cada decisão ensina. Documento de aprendizado:
+> o foco é **expor a mecânica**, não escondê-la.
 
 ---
 
@@ -92,7 +92,7 @@ if startup.extraction_basis == "metadata":
 **Por que `Non-AI` e não "desconhecido"?** O enum só tem três valores, e o
 conservador é **não afirmar IA sem evidência**. O `confidence="low"` + a
 justificativa sinalizam que é provisório — e o Evidence Validator / loop de
-re-coleta podem revisitar. Honra duas regras do CLAUDE.md de uma vez: "não
+re-coleta podem revisitar. Honra duas regras do projeto de uma vez: "não
 inventar" e "sinalizar confiança".
 
 ---

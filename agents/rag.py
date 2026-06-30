@@ -16,7 +16,7 @@ Decisões de design (alinhadas ao resto do grafo):
     fake (mesma "costura" do get_llm/fetch_static).
   - Perfil POBRE (só metadata, sem descrição/sinais) => NÃO consulta: sem
     matéria-prima, a query seria ruído e recuperaria trechos genéricos. O jeito
-    honesto é não perguntar (CLAUDE.md), registrando o motivo.
+    honesto é não perguntar, registrando o motivo.
   - Erro POR STARTUP: uma consulta que falha vira contexto vazio + log, não
     derruba as demais.
 """

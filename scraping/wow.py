@@ -1,6 +1,6 @@
 """Adapter da WOW Aceleradora (wow.ac) — primeira fonte real do Scraper.
 
-Decisão de design documentada (o tipo de raciocínio que o CLAUDE.md pede):
+Decisão de design documentada (o tipo de raciocínio que o projeto pede):
 a página /portfolio é uma SPA. O HTML estático traz só ~4 cases em destaque;
 o grid completo (~40 startups) só aparece DEPOIS do JS rodar. Por isso este
 adapter usa `fetch_dynamic` (navegador), e não `fetch_static`.

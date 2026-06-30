@@ -6,7 +6,7 @@ CONSISTÊNCIA da evidência por trás do rótulo, e emite uma `validation_confid
 própria. Quando a coleta foi fraca demais, ele pode mandar o grafo RECOLETAR.
 
 Por que baseado em REGRAS (sem LLM):
-  - CLAUDE.md — "estruture como regras explícitas antes de usar LLM". Validar
+  - Princípio do projeto: "estruture como regras explícitas antes de usar LLM". Validar
     consistência é justamente o tipo de coisa que regras fazem bem: transparente,
     determinístico, barato e testável offline sem nenhum LLM falso.
   - Deixa a mecânica da ARESTA CONDICIONAL cristalina, sem ruído de LLM.

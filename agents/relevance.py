@@ -16,7 +16,7 @@ Decisões de design:
     sinal disponível antes de visitar o site da startup.
   - Teto `max_startups`: limita quantas seguem para o enriquecimento.
   - RESILIENTE: se o LLM falhar, cai no comportamento antigo (primeiras N) em vez
-    de derrubar o pipeline (tratamento de erro explícito — CLAUDE.md).
+    de derrubar o pipeline (tratamento de erro explícito).
   - Sem startups ou sem query => passa direto (nada a filtrar).
 """
 from langchain_core.messages import HumanMessage, SystemMessage
