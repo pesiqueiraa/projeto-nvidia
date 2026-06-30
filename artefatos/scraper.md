@@ -26,18 +26,49 @@ Essa separação de responsabilidades mantém cada peça simples e testável.
 
 ---
 
-## 2. A ferramenta: Scrapling (e a tensão que ela cria)
+## 2. A ferramenta: Scrapling (e como difere do scraping tradicional)
 
 Adotamos o [**Scrapling**](https://github.com/D4Vinci/Scrapling) como scraper
 principal — um framework que unifica numa lib só o que normalmente exigiria
-quatro (requests, Playwright, BeautifulSoup, Scrapy).
+quatro ferramentas especializadas.
 
-**A tensão honesta:** o projeto pede para *expor a mecânica* de cada
-tecnologia, e o Scrapling é um wrapper que *esconde* parte dela. A decisão
-consciente foi: usar o Scrapling pela robustez (anti-bot, render JS, seletores
-adaptativos), **mas compensar com documentação** — é o que este arquivo faz.
-Mantivemos `playwright`/`beautifulsoup4`/`trafilatura` no `pyproject.toml`
-como referência e para fases futuras (notícias/enriquecimento).
+### A divergência: stack tradicional × Scrapling
+
+O scraping "clássico" monta um **pipeline de ferramentas especializadas**, cada
+uma resolvendo uma etapa:
+
+| Etapa | Ferramenta tradicional | O que faz |
+|---|---|---|
+| Baixar HTML estático | `requests` / `httpx` | GET puro, sem executar JS |
+| Renderizar JS | Playwright / Selenium | sobe um navegador e roda o JavaScript |
+| Parsear o HTML | BeautifulSoup / lxml | navega o DOM e extrai os dados |
+| Orquestrar crawl | Scrapy | agenda requisições, paraleliza, segue links |
+
+O custo dessa abordagem é a **costura manual**: você decide a cada fonte se
+precisa de navegador, instancia a ferramenta certa, passa o HTML de uma para a
+outra, e trata anti-bot/fingerprint por conta própria.
+
+O **Scrapling** colapsa essas quatro camadas atrás de **uma única API**, e
+acrescenta o que a stack tradicional não dá de graça:
+
+- **Três fetchers no mesmo contrato** (`Fetcher` estático, `DynamicFetcher` com
+  navegador, `StealthyFetcher` anti-bot) — trocar de estático para render JS é
+  trocar a função chamada, não a biblioteca nem o parsing.
+- **Fingerprint TLS realista** já no fetch estático — o `requests` puro entrega
+  um fingerprint de bot que muitos sites barram; o Scrapling imita um navegador
+  de verdade sem precisar subir um.
+- **Bypass anti-bot/Cloudflare** embutido (`StealthyFetcher`), que no fluxo
+  tradicional exigiria plugins de stealth configurados à mão.
+- **Seletores adaptativos**: o parsing é o mesmo objeto do fetch (sem passar o
+  HTML para uma lib separada), e os seletores toleram pequenas mudanças de
+  layout em vez de quebrarem no primeiro `<div>` que muda de lugar.
+
+Em resumo: a stack tradicional **expõe cada camada** (mais controle, mais código
+de cola); o Scrapling **integra as camadas** (menos código, mais robustez de
+fábrica), ao custo de abstrair os detalhes de baixo nível. Por isso este
+documento detalha o que acontece por baixo — para que a abstração não vire
+caixa-preta. Mantivemos `playwright`/`beautifulsoup4`/`trafilatura` no
+`pyproject.toml` como referência e para fases futuras (notícias/enriquecimento).
 
 ### Os três fetchers — a decisão de cada requisição
 
@@ -65,6 +96,7 @@ adapter**: cada fonte tem seu arquivo, e todos expõem a **mesma interface**.
 scraping/
 ├── base.py        # RawStartup (contrato de saída) + SourceAdapter (contrato)
 ├── fetch.py       # fetch_static / fetch_dynamic (a "costura" trocada nos testes)
+├── search.py      # busca o site oficial via DuckDuckGo (usado no enriquecimento)
 ├── registry.py    # mapa  domínio → adapter
 ├── wow.py         # ┐
 ├── openstartups.py# │ um adapter por fonte

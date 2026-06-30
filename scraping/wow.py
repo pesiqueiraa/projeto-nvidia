@@ -2,7 +2,7 @@
 
 Decisão de design documentada (o tipo de raciocínio que o projeto pede):
 a página /portfolio é uma SPA. O HTML estático traz só ~4 cases em destaque;
-o grid completo (~40 startups) só aparece DEPOIS do JS rodar. Por isso este
+o grid completo (~194 startups) só aparece DEPOIS do JS rodar. Por isso este
 adapter usa `fetch_dynamic` (navegador), e não `fetch_static`.
 
 Dois sinais de descoberta na página:
